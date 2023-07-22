@@ -17,6 +17,19 @@ from rclpy.node import Node
 
 from std_msgs.msg import String
 
+from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import QoSProfile
+from rclpy.qos import QoSReliabilityPolicy
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint # Used for publishing mara joint angles.
+#from control_msgs.msg import JointTrajectoryControllerState
+# from gazebo_msgs.srv import SetEntityState, DeleteEntity
+#from gazebo_msgs.msg import ContactState, ModelState#, GetModelList
+from std_msgs.msg import String
+from std_srvs.srv import Empty
+from geometry_msgs.msg import Pose, Twist
+from ros2pkg.api import get_prefix_path
+from builtin_interfaces.msg import Duration
+#exit()
 
 class MinimalPublisher(Node):
 
@@ -27,12 +40,22 @@ class MinimalPublisher(Node):
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.i = 0
 
+        self.publisher_v = self.create_publisher(Twist, 'cmd_vel', 10)
+        #self.pub_cmd_vel = rospy.Publisher('cmd_vel', Twist, queue_size=5)
+        
+        
     def timer_callback(self):
         msg = String()
         msg.data = 'Hello World: %d' % self.i
         self.publisher_.publish(msg)
         self.get_logger().info('Publishing: "%s"' % msg.data)
         self.i += 1
+
+        vel_cmd = Twist()
+        vel_cmd.linear.x = -0.1 #self.const_linear_vel 
+        vel_cmd.angular.z = 0.0#1 #self.ang_vel
+        self.publisher_v.publish(vel_cmd)
+        #self.pub_cmd_vel.publish(vel_cmd)
 
 
 def main(args=None):
