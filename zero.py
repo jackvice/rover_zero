@@ -2,6 +2,9 @@ import gym
 #import rospy
 from rclpy.node import Node
 
+
+
+
 import numpy as np
 import math
 import time
@@ -10,12 +13,14 @@ from geometry_msgs.msg import Twist, Point, Pose
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 from std_srvs.srv import Empty
-from gym import spaces
+#from gym import spaces
+from gym import utils, spaces
 from gym.utils import seeding
-from gym_turtlebot3.envs.mytf import euler_from_quaternion
-from gym_turtlebot3.envs import Respawn
+#from gym_turtlebot3.envs.mytf import euler_from_quaternion
+#from gym_turtlebot3.envs import Respawn
 
-class TurtleBot3Env(gym.Env):
+exit()
+class RoverZeroEnv(gym.Env):
 
     def __init__(self, 
             goal_list=None,
@@ -41,12 +46,14 @@ class TurtleBot3Env(gym.Env):
         self.initGoal = True
         self.get_goalbox = False
         self.position = Pose()
-        self.pub_cmd_vel = rospy.Publisher('cmd_vel', Twist, queue_size=5)
-        self.sub_odom = rospy.Subscriber('odom', Odometry, self.getOdometry)
-        self.reset_proxy = rospy.ServiceProxy('gazebo/reset_simulation', Empty)
-        self.unpause_proxy = rospy.ServiceProxy('gazebo/unpause_physics', Empty)
-        self.pause_proxy = rospy.ServiceProxy('gazebo/pause_physics', Empty)
-        self.respawn_goal = Respawn()
+        #self.pub_cmd_vel = rospy.Publisher('cmd_vel', Twist, queue_size=5)
+
+        self.pub_cmd_vel = self.create_publisher(Twist, 'cmd_vel', 10)
+        #self.sub_odom = rospy.Subscriber('odom', Odometry, self.getOdometry)
+        #self.reset_proxy = rospy.ServiceProxy('gazebo/reset_simulation', Empty)
+        #self.unpause_proxy = rospy.ServiceProxy('gazebo/unpause_physics', Empty)
+        #self.pause_proxy = rospy.ServiceProxy('gazebo/pause_physics', Empty)
+        #self.respawn_goal = Respawn()
 
         self.respawn_goal.setGoalList(goal_list)
 
@@ -193,7 +200,7 @@ class TurtleBot3Env(gym.Env):
         elif done:
             reward = self.reward_collision=-200
             self.pub_cmd_vel.publish(Twist())
-            if self.respawn_goal.last_index is not 0:
+            if self.respawn_goal.last_index != 0:
                 self.respawn_goal.initIndex()
                 self.goal_x, self.goal_y = self.respawn_goal.getPosition()
                 self.goal_distance = self._getGoalDistace()

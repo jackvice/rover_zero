@@ -52,8 +52,8 @@ class MinimalPublisher(Node):
         self.i += 1
 
         vel_cmd = Twist()
-        vel_cmd.linear.x = -0.1 #self.const_linear_vel 
-        vel_cmd.angular.z = 0.0#1 #self.ang_vel
+        vel_cmd.linear.x = -0.01 #self.const_linear_vel 
+        vel_cmd.angular.z = 0.0 #self.ang_vel
         self.publisher_v.publish(vel_cmd)
         #self.pub_cmd_vel.publish(vel_cmd)
 
