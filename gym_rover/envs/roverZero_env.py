@@ -138,11 +138,11 @@ class RoverZeroEnv(gym.Env):
     def episode_finished(self):
         pass
 
-    def preprocess_lidar_distances(self, scan_range):
-        return scan_range
+    #def preprocess_lidar_distances(self, scan_range):
+    #    return scan_range
 
-    def get_env_state(self):
-        return self.lidar_distances
+    #def get_env_state(self):
+    #    return self.lidar_distances
 
     def getState(self, scan):
         scan_range = []

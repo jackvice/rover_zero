@@ -29,13 +29,14 @@ from std_srvs.srv import Empty
 from geometry_msgs.msg import Pose, Twist
 from ros2pkg.api import get_prefix_path
 from builtin_interfaces.msg import Duration
+
 #exit()
 
 class MinimalPublisher(Node):
 
     def __init__(self):
         super().__init__('minimal_publisher')
-        self.publisher_ = self.create_publisher(String, 'topic', 10)
+        self.publisher_ = self.create_publisher(String, 'jackstring', 10)
         timer_period = 0.5  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.i = 0
@@ -53,7 +54,7 @@ class MinimalPublisher(Node):
 
         vel_cmd = Twist()
         vel_cmd.linear.x = -0.01 #self.const_linear_vel 
-        vel_cmd.angular.z = -0.01 #self.ang_vel
+        vel_cmd.angular.z = -0.005 #self.ang_vel
         self.publisher_v.publish(vel_cmd)
         #self.pub_cmd_vel.publish(vel_cmd)
 
