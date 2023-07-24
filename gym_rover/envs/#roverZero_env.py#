@@ -10,7 +10,7 @@ import signal
 import sys
 from scipy.stats import skew
 from gym import utils, spaces
-from gym_gazebo2.utils import ut_generic, ut_launch, ut_mara, ut_math, ut_gazebo, tree_urdf, general_utils
+#from gym_gazebo2.utils import ut_generic, ut_launch, ut_mara, ut_math, ut_gazebo, tree_urdf, general_utils
 from gym.utils import seeding
 from gazebo_msgs.srv import SpawnEntity
 import subprocess
@@ -19,7 +19,6 @@ import transforms3d as tf3d
 
 # ROS 2
 import rclpy
-
 
 from rclpy.qos import qos_profile_sensor_data
 from rclpy.qos import QoSProfile
@@ -220,7 +219,8 @@ class RoverZeroEnv(gym.Env):
 
         # Check that the observation is not prior to the action
         # obs_message = self._observation_msg
-        while obs_message is None or int(str(self._observation_msg.header.stamp.sec)+(str(self._observation_msg.header.stamp.nanosec))) < self.ros_clock:
+        while obs_message is None or int(str(self._observation_msg.header.stamp.sec)+
+                                         (str(self._observation_msg.header.stamp.nanosec))) < self.ros_clock:
             # print("I am in obs_message is none")
             rclpy.spin_once(self.node)
             obs_message = self._observation_msg

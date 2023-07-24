@@ -25,9 +25,6 @@ from rclpy.qos import qos_profile_sensor_data
 from rclpy.qos import QoSProfile
 from rclpy.qos import QoSReliabilityPolicy
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint # Used for publishing mara joint angles.
-
-from tf2_msgs.msg import TFMessage  # gazebo message over bridge to ros2 for position and orientation
-
 from control_msgs.msg import JointTrajectoryControllerState
 # from gazebo_msgs.srv import SetEntityState, DeleteEntity
 from gazebo_msgs.msg import ContactState, ModelState#, GetModelList
@@ -40,23 +37,23 @@ from builtin_interfaces.msg import Duration
 # Algorithm specific
 from PyKDL import ChainJntToJacSolver # For KDL Jacobians
 
-class RoverZeroEnv(gym.Env):
+class MARAEnv(gym.Env):
     """
     TODO. Define the environment.
     """
 
     def __init__(self):
         """
-        Initialize the RZero environemnt
+        Initialize the MARA environemnt
         """
         # Manage command line args
-        #args = ut_generic.getArgsParserMARA().parse_args()
-        #self.gzclient = args.gzclient
-        #self.realSpeed = args.realSpeed
+        args = ut_generic.getArgsParserMARA().parse_args()
+        self.gzclient = args.gzclient
+        self.realSpeed = args.realSpeed
         # self.realSpeed = True
-        #self.velocity = args.velocity
-        #self.multiInstance = args.multiInstance
-        #self.port = args.port
+        self.velocity = args.velocity
+        self.multiInstance = args.multiInstance
+        self.port = args.port
 
         # Set the path of the corresponding URDF file
         if self.realSpeed:
@@ -73,7 +70,6 @@ class RoverZeroEnv(gym.Env):
 
         # Create the node after the new ROS_DOMAIN_ID is set in generate_launch_description()
         rclpy.init()
-        #self.node = rclpy.create_node(self.__class__.__name__)
         self.node = rclpy.create_node(self.__class__.__name__)
 
         # class variables
@@ -87,41 +83,58 @@ class RoverZeroEnv(gym.Env):
         #   Environment hyperparams
         #############################
         # Target, where should the agent reach
-        #self.targetPosition = np.asarray([-0.40028, 0.095615, 0.25]) # close to the table
         self.targetPosition = np.asarray([-0.40028, 0.095615, 0.25]) # close to the table
-
-        # self.targetPosition =  np.asarray([round(np.random.uniform(-0.615082, -0.35426),
-        #                                5), round(np.random.uniform( -0.18471, 0.1475), 5), 0.35])
+        # self.targetPosition =  np.asarray([round(np.random.uniform(-0.615082, -0.35426), 5), round(np.random.uniform( -0.18471, 0.1475), 5), 0.35])
         self.target_orientation = np.asarray([0., 0.7071068, 0.7071068, 0.]) # arrow looking down [w, x, y, z]
         # self.targetPosition = np.asarray([-0.386752, -0.000756, 1.40557]) # easy point
-        # self.target_orientation = np.asarray([-0.4958324, 0.5041332,
-        #                                        0.5041331, -0.4958324]) # arrow looking opposite to MARA [w, x, y, z]
+        # self.target_orientation = np.asarray([-0.4958324, 0.5041332, 0.5041331, -0.4958324]) # arrow looking opposite to MARA [w, x, y, z]
 
-        #EE_POINTS = np.asmatrix([[0, 0, 0]])
-        #EE_VELOCITIES = np.asmatrix([[0, 0, 0]])
+        EE_POINTS = np.asmatrix([[0, 0, 0]])
+        EE_VELOCITIES = np.asmatrix([[0, 0, 0]])
 
         # Initial joint position
-        #INITIAL_JOINTS = np.array([0., 0., 0., 0., 0., 0.])
+        INITIAL_JOINTS = np.array([0., 0., 0., 0., 0., 0.])
 
         # # Topics for the robot publisher and subscriber.
-        #JOINT_PUBLISHER = '/mara_controller/command'
-        #JOINT_SUBSCRIBER = '/mara_controller/state'
-        
-        ZERO_PUBLISHER = '/cmd_vel'
-        ZERO_SUBSCRIBER = '/world/maze/dynamic_pose/info'
+        JOINT_PUBLISHER = '/mara_controller/command'
+        JOINT_SUBSCRIBER = '/mara_controller/state'
+
+
+        # joint names:
+        MOTOR1_JOINT = 'motor1'
+        MOTOR2_JOINT = 'motor2'
+        MOTOR3_JOINT = 'motor3'
+        MOTOR4_JOINT = 'motor4'
+        MOTOR5_JOINT = 'motor5'
+        MOTOR6_JOINT = 'motor6'
+        EE_LINK = 'ee_link'
 
         # Set constants for links
         WORLD = 'world'
         BASE = 'base_robot'
+        MARA_MOTOR1_LINK = 'motor1_link'
+        MARA_MOTOR2_LINK = 'motor2_link'
+        MARA_MOTOR3_LINK = 'motor3_link'
+        MARA_MOTOR4_LINK = 'motor4_link'
+        MARA_MOTOR5_LINK = 'motor5_link'
+        MARA_MOTOR6_LINK = 'motor6_link'
+        EE_LINK = 'ee_link'
+
+        JOINT_ORDER = [MOTOR1_JOINT,MOTOR2_JOINT, MOTOR3_JOINT,
+                        MOTOR4_JOINT, MOTOR5_JOINT, MOTOR6_JOINT]
+        LINK_NAMES = [ WORLD, BASE,
+                        MARA_MOTOR1_LINK, MARA_MOTOR2_LINK,
+                        MARA_MOTOR3_LINK, MARA_MOTOR4_LINK,
+                        MARA_MOTOR5_LINK, MARA_MOTOR6_LINK, EE_LINK]
 
         reset_condition = {
             'initial_positions': INITIAL_JOINTS,
-            'initial_velocities': []
+             'initial_velocities': []
         }
         #############################
 
-        #m_jointOrder = copy.deepcopy(JOINT_ORDER)
-        #m_linkNames = copy.deepcopy(LINK_NAMES)
+        m_jointOrder = copy.deepcopy(JOINT_ORDER)
+        m_linkNames = copy.deepcopy(LINK_NAMES)
 
         # Initialize target end effector position
         self.environment = {
@@ -132,32 +145,36 @@ class RoverZeroEnv(gym.Env):
             'end_effector_points': EE_POINTS,
         }
 
-
-        self._pub = self.node.create_publisher(JointTrajectory, JOINT_PUBLISHER,
-                                               qos_profile=qos_profile_sensor_data)
-
-        self._sub = self.node.create_subscription(TFMessage,
-                                                  ZERO_SUBSCRIBER, self.observation_callback)
-                                                  #qos_profile=qos_profile_sensor_data)
-
-        #self._sub_coll = self.node.create_subscription(ContactState, '/gazebo_contacts',
-        #                                               self.collision_callback,
-        #                                               qos_profile=qos_profile_sensor_data)
+        # Subscribe to the appropriate topics, taking into account the particular robot
+        self._pub = self.node.create_publisher(JointTrajectory, JOINT_PUBLISHER, qos_profile=qos_profile_sensor_data)
+        self._sub = self.node.create_subscription(JointTrajectoryControllerState, JOINT_SUBSCRIBER, self.observation_callback, qos_profile=qos_profile_sensor_data)
+        self._sub_coll = self.node.create_subscription(ContactState, '/gazebo_contacts', self.collision_callback, qos_profile=qos_profile_sensor_data)
         self.reset_sim = self.node.create_client(Empty, '/reset_simulation')
 
         # Initialize a tree structure from the robot urdf.
         #   note that the xacro of the urdf is updated by hand.
         # The urdf must be compiled.
         _, self.ur_tree = tree_urdf.treeFromFile(self.environment['tree_path'])
+        # Retrieve a chain structure between the base and the start of the end effector.
+        self.mara_chain = self.ur_tree.getChain(self.environment['linkNames'][0], self.environment['linkNames'][-1])
+        self.numJoints = self.mara_chain.getNrOfJoints()
+        # Initialize a KDL Jacobian solver from the chain.
+        self.jacSolver = ChainJntToJacSolver(self.mara_chain)
 
-        #self.action_space = spaces.Box(low, high)
-        high = 5.0
-        low = -5.0
+        self.obs_dim = self.numJoints + 6 + 12
+
+        # # Here idially we should find the control range of the robot. Unfortunatelly in ROS/KDL there is nothing like this.
+        # # I have tested this with the mujoco enviroment and the output is always same low[-1.,-1.], high[1.,1.]
+
+        low = -np.pi * np.ones(self.numJoints)
+        high = np.pi * np.ones(self.numJoints)
+
         self.action_space = spaces.Box(low, high)
 
-        high = 10.0
-        low = -10.0
+        high = np.inf*np.ones(self.obs_dim)
+        low = -high
         self.observation_space = spaces.Box(low, high)
+
 
         spawn_cli = self.node.create_client(SpawnEntity, '/spawn_entity')
 
