@@ -157,20 +157,6 @@ class RoverZeroEnv(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def get_action_space_values(self):
-        lin_low = -3.0 self.min_ang_vel
-        lin_high = self.max_ang_vel
-        ang_low = self.min_ang_vel
-        ang_high = self.max_ang_vel
-        shape_value = 1
-
-        return low, high, shape_value
-
-    def get_observation_space_values(self):
-        low = np.append(np.full(self.observation_size, self.min_range), np.array([-math.pi, 0], dtype=np.float32))
-        high = np.append(np.full(self.observation_size, self.max_range), np.array([math.pi, self.max_env_size], dtype=np.float32))
-        return low, high
-
     def step(self, action):
 
         self.set_ang_vel(action)
@@ -178,6 +164,7 @@ class RoverZeroEnv(gym.Env):
         vel_cmd = Twist()
         vel_cmd.linear.x = self.const_linear_vel
         vel_cmd.angular.z = self.ang_vel
+        
         self.pub_cmd_vel.publish(vel_cmd)
 
         data = None
@@ -192,6 +179,22 @@ class RoverZeroEnv(gym.Env):
         self.num_timesteps += 1
 
         return np.asarray(state), reward, done, {}
+
+    def get_action_space_values(self):
+        lin_low = -3.0 #self.min_ang_vel
+        lin_high = 3.0 #self.max_ang_vel
+        ang_low = -3.0 self.min_ang_vel
+        ang_high = 3.0 self.max_ang_vel
+        shape_value = 2
+        return low, high, shape_value
+
+    
+    def get_observation_space_values(self):
+        low = np.append(np.full(self.observation_size, self.min_range), np.array([-math.pi, 0], dtype=np.float32))
+        high = np.append(np.full(self.observation_size, self.max_range), np.array([math.pi, self.max_env_size], dtype=np.float32))
+        return low, high
+
+
     
     def _getGoalDistace(self):
         goal_distance = round(math.hypot(self.goal_x - self.position.x, self.goal_y - self.position.y), 2)
