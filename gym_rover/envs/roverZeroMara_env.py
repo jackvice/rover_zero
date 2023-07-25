@@ -245,10 +245,12 @@ class RoverZeroEnv(gym.Env):
                                                 baseLink=self.environment['linkNames'][0], # use the base_robot coordinate system
                                                 endLink=self.environment['linkNames'][-1])
 
-            current_eePos_tgt = np.ndarray.flatten(general_utils.getEePoints(self.environment['end_effector_points'], translation, rot).T)
+            current_eePos_tgt = np.ndarray.flatten(general_utils.getEePoints(self.environment['end_effector_points'],
+                                                                             translation, rot).T)
             eePos_points = current_eePos_tgt - self.targetPosition
 
-            eeVelocities = ut_mara.getEePointsVelocities(ee_link_jacobians, self.environment['end_effector_points'], rot, lastObservations)
+            eeVelocities = ut_mara.getEePointsVelocities(ee_link_jacobians, self.environment['end_effector_points'],
+                                                         rot, lastObservations)
 
             # Concatenate the information that defines the robot state
             # vector, typically denoted asrobot_id 'x'.

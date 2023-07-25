@@ -132,8 +132,8 @@ class RoverZeroEnv(gym.Env):
         obs_message = self.observation_pose_msg
         # Check that the observation is not prior to the action
         # obs_message = self._observation_msg
-        while obs_message is None or int(str(self._observation_msg.header.stamp.sec)+
-                                         (str(self._observation_msg.header.stamp.nanosec))) < self.ros_clock:
+        while obs_message is None or int(str(self.observation_pose_msg.header.stamp.sec)+
+                                         (str(self.observation_pose_msg.header.stamp.nanosec))) < self.ros_clock:
             # print("I am in obs_message is none")
             rclpy.spin_once(self.node)
             obs_message = self.observation_pose_msg
@@ -158,8 +158,10 @@ class RoverZeroEnv(gym.Env):
         return [seed]
 
     def get_action_space_values(self):
-        low = self.min_ang_vel
-        high = self.max_ang_vel
+        lin_low = -3.0 self.min_ang_vel
+        lin_high = self.max_ang_vel
+        ang_low = self.min_ang_vel
+        ang_high = self.max_ang_vel
         shape_value = 1
 
         return low, high, shape_value
@@ -169,6 +171,28 @@ class RoverZeroEnv(gym.Env):
         high = np.append(np.full(self.observation_size, self.max_range), np.array([math.pi, self.max_env_size], dtype=np.float32))
         return low, high
 
+    def step(self, action):
+
+        self.set_ang_vel(action)
+
+        vel_cmd = Twist()
+        vel_cmd.linear.x = self.const_linear_vel
+        vel_cmd.angular.z = self.ang_vel
+        self.pub_cmd_vel.publish(vel_cmd)
+
+        data = None
+        while data is None:
+            try:
+                data = rospy.wait_for_message('scan', LaserScan, timeout=5)
+            except:
+                pass
+
+        state, done = self.getState(data)
+        reward = self.setReward(state, done, action)
+        self.num_timesteps += 1
+
+        return np.asarray(state), reward, done, {}
+    
     def _getGoalDistace(self):
         goal_distance = round(math.hypot(self.goal_x - self.position.x, self.goal_y - self.position.y), 2)
         return goal_distance
@@ -207,7 +231,7 @@ class RoverZeroEnv(gym.Env):
 
     #def get_env_state(self):
     #    return self.lidar_distances
-
+    """
     def getState(self, scan):
         scan_range = []
         heading = self.heading
@@ -242,7 +266,7 @@ class RoverZeroEnv(gym.Env):
                     self.episode_finished()
             
         return self.get_env_state() + [heading, current_distance], done
-
+    """
 
     def navigationReward(self, heading):
         reference = 1-2*abs(heading)/math.pi
@@ -283,7 +307,7 @@ class RoverZeroEnv(gym.Env):
         else:
             self.ang_vel = self.actions[action]
 
-    def step(self, action):
+    def stepOLd(self, action):
 
         self.set_ang_vel(action)
 
