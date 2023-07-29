@@ -201,8 +201,8 @@ if __name__ == "__main__":
     actions = torch.zeros((args.num_steps, ) + envs.action_space.shape).to(device)
     logprobs = torch.zeros(args.num_steps).to(device)
     rewards = torch.zeros(args.num_steps).to(device)
-    dones = torch.zeros((args.num_steps).to(device)
-    values = torch.zeros((args.num_steps).to(device)
+    dones = torch.zeros(args.num_steps).to(device)
+    values = torch.zeros(args.num_steps).to(device)
 
     
     # TRY NOT TO MODIFY: start the game
