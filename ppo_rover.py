@@ -15,16 +15,18 @@ import torch.optim as optim
 from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
 
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning) 
 
-import wandb
+#import wandb
 
 
 
 ROVER = True
-ROVER = False
+#ROVER = False
 CHECKPOINT = False
-CHECKPOINT_FREQUENCY = 20
-PATH = "runs/agent.pt"
+CHECKPOINT_FREQUENCY = 5
+AGENT_PATH = "runs/agent.pt"
 
 def parse_args():
     # fmt: off
@@ -210,34 +212,17 @@ if __name__ == "__main__":
     global_step = 0
     start_time = time.time()
     next_obs, _ = envs.reset()
-    print("obs", next_obs)
+    #print("obs", next_obs)
     next_obs = torch.Tensor(next_obs).to(device)
     next_done = torch.zeros(args.num_envs).to(device)
     num_updates = args.total_timesteps // args.batch_size
 
     
     if CHECKPOINT:
-        #starting_update = run.summary.get("charts/update") + 1
-        #global_step = starting_update * args.batch_size
-        #api = wandb.Api()
-        #run = api.run(f"{run.entity}/{run.project}/{run.id}")
-        #model = run.file("agent.pt")
-        #model.download(f"models/{experiment_name}/")
-        #agent.load_state_dict(torch.load(
-        #    f"models/{experiment_name}/agent.pt", map_location=device))
-        #agent.eval()
-        print(f"resumed at update {starting_update}")
-        #model = Net()
-        #optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
-        
-        checkpoint = torch.load(PATH)
-        model.load_state_dict(checkpoint['model_state_dict'])
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        global_step = checkpoint['global_step']
-        v_loss = checkpoint['value_loss']
-        pg_loss = checkpoint['policy_loss']
+        agent.load_state_dict(torch.load(AGENT_PATH, map_location=device))
         agent.eval()
-
+        print(" ")
+        print(f"resumed at update {global_step} steps")
 
 
         
@@ -373,14 +358,14 @@ if __name__ == "__main__":
         # make sure to tune `CHECKPOINT_FREQUENCY` 
         # so models are not saved too frequently
         if update % CHECKPOINT_FREQUENCY == 0:
-            #torch.save(agent.state_dict(), f"{wandb.run.dir}/agent.pt")
-            torch.save({
-                'global_steps': global_step,
-                'agent_state_dict': agent.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'value_loss': v_loss,
-                'policy_loss': pg_loss,
-            }, PATH)
+            torch.save(agent.state_dict(), AGENT_PATH)
+            #torch.save({
+            #    'global_steps': global_step,
+            #    'agent_state_dict': agent.state_dict(),
+            #    'optimizer_state_dict': optimizer.state_dict(),
+            #    'value_loss': v_loss,
+            #    'policy_loss': pg_loss,
+            #}, PATH)
             #wandb.save(f"{wandb.run.dir}/agent.pt", policy="now")
             print("####################### Checkpoint Saved at runs/agent.pt")
         # TRY NOT TO MODIFY: record rewards for plotting purposes
