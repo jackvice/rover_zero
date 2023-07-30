@@ -16,7 +16,7 @@ from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
 
 ROVER = True
-#ROVER = False
+ROVER = False
 
 def parse_args():
     # fmt: off
@@ -214,7 +214,7 @@ if __name__ == "__main__":
             optimizer.param_groups[0]["lr"] = lrnow
 
         for step in range(0, args.num_steps):
-            print("step",step)
+            #print("step",step)
             global_step += 1 * args.num_envs
             obs[step] = next_obs
             dones[step] = next_done
