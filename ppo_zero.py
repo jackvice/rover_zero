@@ -211,10 +211,16 @@ if __name__ == "__main__":
     #next_obs, _ = envs.reset(seed=args.seed)
     #next_obs = torch.Tensor(next_obs).to(device)
     next_obs = torch.Tensor(envs.reset()[0]).to(device)
-    next_done = torch.zeros(args.num_envs).to(device)
+    #next_done = torch.zeros(args.num_envs).to(device)
+    next_done = torch.zeros(1).to(device)
+    print("args.num_envs", args.num_envs)
+    print("next_done[0] is", next_done[0], ", and dones is ", dones)
+    print(" args.num_steps is", args.num_steps)
+    #exit()
     num_updates = args.total_timesteps // args.batch_size
 
     for update in range(1, num_updates + 1):
+        print(update)
         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
             frac = 1.0 - (update - 1.0) / num_updates
@@ -224,7 +230,9 @@ if __name__ == "__main__":
         for step in range(0, args.num_steps):
             global_step += 1 * args.num_envs
             obs[step] = next_obs
-            dones[step] = next_done
+            print("next_done[0] is", next_done[0], ", and dones[step] is ", dones[step])
+            exit()
+            dones[step] = next_done[0]
 
             # ALGO LOGIC: action logic
             with torch.no_grad():
