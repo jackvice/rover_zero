@@ -11,7 +11,7 @@ env = gym.make('RoverZero-v0')
 #env = gym.make('MARACollisionOrient-v0')
 #env = gym.make('MARACollisionOrientRandomTarget-v0')
 
-observation = env.reset()
+observation, _ = env.reset()
 
 while True:
     # take a random action
