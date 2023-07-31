@@ -23,9 +23,9 @@ class MinimalSubscriber(Node):
     def listener_callback(self, msg):
         #self.get_logger().info('I heard: "%s"' % msg.transforms[0].transform.translation.x)
         #print(dir(msg.transforms[0].transform.translation))
-        print('pos x',msg.transforms[0].transform.translation.x)
-        print('pos y',msg.transforms[0].transform.translation.y)
-        print('pos z',msg.transforms[0].transform.translation.z)
+        #print('pos x',msg.transforms[0].transform.translation.x)
+        #print('pos y',msg.transforms[0].transform.translation.y)
+        #print('pos z',msg.transforms[0].transform.translation.z)
         print('quat x',msg.transforms[0].transform.rotation.x)
         print('quat y',msg.transforms[0].transform.rotation.y)
         print('quat z',msg.transforms[0].transform.rotation.z)

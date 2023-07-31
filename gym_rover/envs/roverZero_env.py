@@ -2,7 +2,7 @@ import gym
 import rclpy
 from rclpy.node import Node
 
-
+import logging
 
 
 import numpy as np
@@ -92,13 +92,19 @@ class RoverZeroEnv(gym.Env):
         self.continuous = continuous
         self.max_env_size = max_env_size
 
-        if self.continuous:
-            low, high, shape_value = self.get_action_space_values()
-            self.action_space = spaces.Box(low=low, high=high, shape=(shape_value,), dtype=np.float32)
-        else:
-            self.action_space = spaces.Discrete(action_size)
-            ang_step = max_ang_vel/((action_size - 1)/2)
-            self.actions = [((action_size - 1)/2 - action) * ang_step for action in range(action_size)]
+        self.reward_target = [-4.0, 3.0] # x and y
+
+        self.old_distance = 5
+
+
+        #low, high, shape_value = self.get_action_space_values()
+        #self.action_space = spaces.Box(low=low, high=high, shape=(shape_value,), dtype=np.float32)
+
+        self.action_space = spaces.Box(
+            np.array([-1.0, -3.0]).astype(np.float32),
+            np.array([1.0, 3.0]).astype(np.float32),
+        )
+
 
         low, high = self.get_observation_space_values()
 
@@ -113,13 +119,14 @@ class RoverZeroEnv(gym.Env):
 
         self.start_time = time.time()
         self.last_step_time = self.start_time
-
-        self.seed()
+        #self.seed()
         
     def observation_callback(self, message):
         """
         Callback method for the subscriber of JointTrajectoryControllerState
         """
+        #print(message)
+        #exit()
         self.observation_pose_msg = message
         
     def take_observation(self):
@@ -129,7 +136,7 @@ class RoverZeroEnv(gym.Env):
         """
         # # # # Take an observation
         rclpy.spin_once(self.node)
-        obs_message = self.observation_pose_msg
+        #obs_message = self.observation_pose_msg
         # Check that the observation is not prior to the action
         # obs_message = self._observation_msg
         #while obs_message is None or int(str(self.observation_pose_msg.header.stamp.sec)+
@@ -141,16 +148,16 @@ class RoverZeroEnv(gym.Env):
         #print('pos z',msg.transforms[0].transform.translation.z)
 
 
-        self.position = obs_message.transforms[0].transform.translation
-        z_position = obs_message.transforms[0].transform.translation
-        orientation = obs_message.transforms[0].transform.rotation
+        #self.position = obs_message.transforms[0].transform.translation
+        z_position = self.observation_pose_msg.transforms[0].transform.translation
+        orientation = self.observation_pose_msg.transforms[0].transform.rotation
         orientation_list = [orientation.x, orientation.y, orientation.z, orientation.w]
 
         roll, pitch, yaw = euler_from_quaternion(orientation_list)
 
         #goal_angle = math.atan2(self.goal_y - self.position.y, self.goal_x - self.position.x)    
         
-        return np.array( [z_position.x, z_position.y, z_position.z, roll, pitch, yaw] )
+        return np.array( [z_position.x, z_position.y, z_position.z, roll, pitch, yaw] ).astype(np.float32)
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -163,26 +170,55 @@ class RoverZeroEnv(gym.Env):
         #self.set_ang_vel(action)
 
         vel_cmd = Twist()
-        vel_cmd.linear.x = 0.05 #self.const_linear_vel # ahole
-        vel_cmd.angular.z = 0.0 #self.ang_vel # ahole
+        #vel_cmd.linear.x = 0.05 #self.const_linear_vel # ahole
+        #vel_cmd.angular.z = 0.0 #self.ang_vel # ahole
+
+        vel_cmd.linear.x = float(np.clip(action[0], -1, 1))
+        vel_cmd.angular.z = float(np.clip(action[1], -3, 3))
         
         self.pub_cmd_vel.publish(vel_cmd)
         self.ros_clock = rclpy.clock.Clock().now().nanoseconds
         
         new_state = self.take_observation()
 
-        reward = 1.0 #self.setReward(state, done, action)
+        #reward = 1.0 #self.setReward(state, done, action)
+        #reward = self.setReward(state, done, action)
         
+        reward = self.navigationReward(new_state)
         done = bool(self.num_timesteps == self.max_episode_steps)
-        return np.asarray(new_state), reward, done, {}
+        #print("step about to return ", np.asarray([new_state]), np.asarray(reward), done, False, {})
+        #exit() np.array([-1.0, -3.0]).
+        return new_state, reward, done, False, {}
 
-    def get_action_space_values(self):
-        lin_low = -3.0 #self.min_ang_vel
-        lin_high = 3.0 #self.max_ang_vel
-        ang_low = -3.0 #self.min_ang_vel
-        ang_high = 3.0 #self.max_ang_vel
-        shape_value = 2
-        return low, high, shape_value
+    def navigationReward(self, state): #        x                  y
+        new_distance = math.dist((self.reward_target[0], self.reward_target[1] ), ( state[0], state[1] ) )
+        #print("new_distance", new_distance, "old_distance", self.old_distance)
+
+        if new_distance <= .05: # goal
+            print("we did it!")
+            exit()
+        if state[3] < -3.14: # flip
+            print("flipped ")
+            exit()
+        if self.old_distance - new_distance == 0:
+            reward = 0
+        else: #                                                           Roll punishment
+            reward = (0.0005 / (self.old_distance - new_distance)) - (100 * abs(state[4])) 
+        #print("reward ", reward, ",   (100 * abs(state[3])", 100 * abs(state[3]) )
+        #exit()        
+        #logger.info("old", self.old_distance,", new", new_distance)
+
+        self.old_distance = new_distance
+
+        return reward
+
+    #def get_action_space_values(self):
+    #    lin_low = -3.0 #self.min_ang_vel
+    #    lin_high = 3.0 #self.max_ang_vel
+    #    ang_low = -3.0 #self.min_ang_vel
+    #    ang_high = 3.0 #self.max_ang_vel
+    #    shape_value = 2
+    #    return low, high, shape_value
 
     
     def get_observation_space_values(self):
@@ -190,7 +226,43 @@ class RoverZeroEnv(gym.Env):
         high = np.append(np.full(self.observation_size, self.max_range), np.array([math.pi, self.max_env_size], dtype=np.float32))
         return low, high
 
+    def reset(self):
+        
+        #Reset the agent for a particular experiment condition.
+        
+        self.num_timesteps = 0
+        """
+        if True: #self.reset_jnts is True:
+            # reset simulation
+            while not self.reset_sim.wait_for_service(timeout_sec=1.0):
+                self.node.get_logger().info('/reset_simulation service not available, waiting again...')
+
+            reset_future = self.reset_sim.call_async(Empty.Request())
+            rclpy.spin_until_future_complete(self.node, reset_future)
+        """
+        self.ros_clock = rclpy.clock.Clock().now().nanoseconds
+
+        # Take an observation
+        obs = self.take_observation()
+
+        # Return the corresponding observation
+        return obs, {}
+
     
+    def render(self, mode=None):
+        pass
+
+
+    def close(self):
+        self.reset()
+
+
+
+
+
+
+        
+    """
     def _getGoalDistace(self):
         goal_distance = round(math.hypot(self.goal_x - self.position.x, self.goal_y - self.position.y), 2)
         return goal_distance
@@ -215,7 +287,7 @@ class RoverZeroEnv(gym.Env):
             heading += 2 * math.pi
 
         self.heading = heading
-
+    
     def get_time_info(self):
         time_info = time.strftime("%H:%M:%S", time.gmtime(time.time() - self.start_time))
         time_info += '-' + str(self.num_timesteps)
@@ -232,7 +304,7 @@ class RoverZeroEnv(gym.Env):
     #    return self.lidar_distances
 
     
-    """
+    
     def getState(self, scan):
         scan_range = []
         heading = self.heading
@@ -358,33 +430,3 @@ class RoverZeroEnv(gym.Env):
         return np.asarray(state)
     """
     
-    def reset(self):
-        
-        #Reset the agent for a particular experiment condition.
-        
-        self.num_timesteps = 0
-        """
-        if True: #self.reset_jnts is True:
-            # reset simulation
-            while not self.reset_sim.wait_for_service(timeout_sec=1.0):
-                self.node.get_logger().info('/reset_simulation service not available, waiting again...')
-
-            reset_future = self.reset_sim.call_async(Empty.Request())
-            rclpy.spin_until_future_complete(self.node, reset_future)
-        """
-        self.ros_clock = rclpy.clock.Clock().now().nanoseconds
-
-        # Take an observation
-        obs = self.take_observation()
-
-        # Return the corresponding observation
-        return obs
-    
-
-
-    def render(self, mode=None):
-        pass
-
-
-    def close(self):
-        self.reset()
