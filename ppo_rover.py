@@ -24,7 +24,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 ROVER = True
 #ROVER = False
-CHECKPOINT = False
+CHECKPOINT = True
 CHECKPOINT_FREQUENCY = 5
 AGENT_PATH = "runs/agent.pt"
 
