@@ -24,8 +24,8 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 ROVER = True
 #ROVER = False
-CHECKPOINT = True
-CHECKPOINT_FREQUENCY = 5
+CHECKPOINT = False
+CHECKPOINT_FREQUENCY = 20
 AGENT_PATH = "runs/agent.pt"
 
 def parse_args():
@@ -378,6 +378,7 @@ if __name__ == "__main__":
         writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
         print("SPS:", int(global_step / (time.time() - start_time)))
+        print("observation:", next_obs)
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
     envs.close()

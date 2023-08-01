@@ -92,6 +92,9 @@ class RoverZeroEnv(gym.Env):
         self.continuous = continuous
         self.max_env_size = max_env_size
 
+        self.reward_numerator = 0.0005
+        self.max_reverse = -0.2
+        self.max_forward = 0.2
         self.reward_target = [-4.0, 3.0] # x and y
 
         self.old_distance = 5
@@ -101,16 +104,16 @@ class RoverZeroEnv(gym.Env):
         #self.action_space = spaces.Box(low=low, high=high, shape=(shape_value,), dtype=np.float32)
 
         self.action_space = spaces.Box(
-            np.array([-1.0, -3.0]).astype(np.float32),
-            np.array([1.0, 3.0]).astype(np.float32),
+            np.array([self.max_reverse, -3.0]).astype(np.float32),
+            np.array([self.max_forward, 3.0]).astype(np.float32),
         )
 
 
         low, high = self.get_observation_space_values()
 
         # x,y,z, roll, pitch, yaw
-        self.observation_space = spaces.Box(low=np.array([-15.0, -15.0,-15.0, -180.0, -180.0, -180.0,]),
-                                            high=np.array([15.0, 15.0, 15.0, 180.0, 180.0, 180.0,]), 
+        self.observation_space = spaces.Box(low=np.array([-15.0, -15.0,-15.0, -3.1412, -3.1412, -3.1412,]),
+                                            high=np.array([15.0, 15.0, 15.0, 3.1412, 3.1412, 3.1412,]), 
                                             shape=(6, ), dtype=np.float32 )
 
         self.num_timesteps = 0
@@ -149,15 +152,15 @@ class RoverZeroEnv(gym.Env):
 
 
         #self.position = obs_message.transforms[0].transform.translation
-        z_position = self.observation_pose_msg.transforms[0].transform.translation
+        rover_position = self.observation_pose_msg.transforms[0].transform.translation
         orientation = self.observation_pose_msg.transforms[0].transform.rotation
         orientation_list = [orientation.x, orientation.y, orientation.z, orientation.w]
-
+        
         roll, pitch, yaw = euler_from_quaternion(orientation_list)
 
         #goal_angle = math.atan2(self.goal_y - self.position.y, self.goal_x - self.position.x)    
-        
-        return np.array( [z_position.x, z_position.y, z_position.z, roll, pitch, yaw] ).astype(np.float32)
+        #print( rover_position.x, rover_position.y, rover_position.z, roll, pitch, yaw )
+        return np.array( [rover_position.x, rover_position.y, rover_position.z, roll, pitch, yaw] ).astype(np.float32)
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -173,7 +176,7 @@ class RoverZeroEnv(gym.Env):
         #vel_cmd.linear.x = 0.05 #self.const_linear_vel # ahole
         #vel_cmd.angular.z = 0.0 #self.ang_vel # ahole
 
-        vel_cmd.linear.x = float(np.clip(action[0], -1, 1))
+        vel_cmd.linear.x = float(np.clip(action[0], self.max_reverse, self.max_forward))
         vel_cmd.angular.z = float(np.clip(action[1], -3, 3))
         
         self.pub_cmd_vel.publish(vel_cmd)
@@ -197,13 +200,13 @@ class RoverZeroEnv(gym.Env):
         if new_distance <= .05: # goal
             print("we did it!")
             exit()
-        if state[3] < -3.14: # flip
-            print("flipped ")
-            exit()
+        #if state[3] < -3.14: # flip
+        #    print("flipped ")
+        #    exit()
         if self.old_distance - new_distance == 0:
             reward = 0
-        else: #                                                           Roll punishment
-            reward = (0.0005 / (self.old_distance - new_distance)) - (100 * abs(state[4])) 
+        else: #                                                                        Roll punishment
+            reward = (self.reward_numerator / (self.old_distance - new_distance)) #- (100 * abs(state[4])) 
         #print("reward ", reward, ",   (100 * abs(state[3])", 100 * abs(state[3]) )
         #exit()        
         #logger.info("old", self.old_distance,", new", new_distance)
