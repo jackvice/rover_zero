@@ -132,22 +132,22 @@ class Agent(nn.Module):
             layer_init(nn.Linear(64, np.prod(envs.action_space.shape)), std=0.01),
         )
         self.actor_logstd = nn.Parameter(torch.zeros(1, np.prod(envs.action_space.shape)))
-
+        #self.actor_logstd = nn.Parameter(torch.zeros(np.prod(envs.action_space.shape)))
+        
     def get_value(self, x):
         return self.critic(x)
 
     def get_action_and_value(self, x, action=None):
         action_mean = self.actor_mean(x)
-        action_logstd = self.actor_logstd.expand_as(action_mean)
+        target_size = action_mean.size()
+        action_logstd = self.actor_logstd.expand_as(target_size)
         action_std = torch.exp(action_logstd)
         probs = Normal(action_mean, action_std)
         if action is None:
             action = probs.sample()
         print('\nactions: ',action)
-        print("probs.log_prob(action).sum(1): ", probs.log_prob(action).sum(1))
-        print("probs.entropy().sum(1): ", probs.entropy().sum(1))
+        #print("probs.entropy().sum(1): ", probs.entropy().sum(1))
         print("self.critic(x): ", self.critic(x), "\n")
-        #exit()
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
 
 
@@ -182,19 +182,11 @@ if __name__ == "__main__":
 
     envs = make_env(args.env_id, 0, args.capture_video, run_name, args.gamma)
     assert isinstance(envs.action_space, gym.spaces.Box), "only continuous action space is supported"
-    ##
-    #print("envs.observation_space.shape", envs.observation_space.shape)
-    #exit()
-    ##
-    
     agent = Agent(envs).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
-    #obs = torch.zeros((args.num_steps, args.num_envs) + envs.observation_space.shape).to(device)
     obs = torch.zeros(args.num_steps, envs.observation_space.shape[0]).to(device)
-    #print("obs.shape", obs.shape)
-    #exit()
     actions = torch.zeros(args.num_steps, envs.action_space.shape[0]).to(device)
     logprobs = torch.zeros(args.num_steps).to(device)
     rewards = torch.zeros(args.num_steps).to(device)
@@ -219,7 +211,7 @@ if __name__ == "__main__":
             optimizer.param_groups[0]["lr"] = lrnow
 
         for step in range(0, args.num_steps):
-            print("\n ########## step",step)
+            print("\n########## step",step)
             global_step += 1 * args.num_envs
             obs[step] = next_obs
             dones[step] = next_done
@@ -235,12 +227,6 @@ if __name__ == "__main__":
 
             # TRY NOT TO MODIFY: execute the game and log data.
             next_obs, reward, terminated, truncated, infos = envs.step(action.cpu().numpy())
-            #print("next_obs:  ",next_obs)
-            #print("reward:  ",reward)
-            #print("terminated: ", terminated)
-            #print("truncated: ", truncated)
-            #print("infos:  ", infos)
-            #done = np.logical_or(terminated, truncated)
             if terminated or truncated:
                 done = 1
             else:
@@ -248,16 +234,6 @@ if __name__ == "__main__":
             rewards[step] = torch.tensor(reward).to(device).view(-1)
             next_done = done
             next_obs= torch.Tensor(next_obs).to(device)
-            #print("next_obs:  ",next_obs)
-            #print("obs[step]:  ", obs[step], ",  step:", step)
-            #print("next_done:  ",next_done)
-            #print("dones:  ", dones)
-
-            #print("###########\n")
-            #exit()
-
-            #next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(done).to(device)
-
             # Only print when at least 1 env is done
             if "final_info" not in infos:
                 continue
@@ -361,16 +337,6 @@ if __name__ == "__main__":
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
 
         # TRY NOT TO MODIFY: record rewards for plotting purposes
-        writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
-        writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
-        writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
-        writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
-        writer.add_scalar("losses/old_approx_kl", old_approx_kl.item(), global_step)
-        writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
-        writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
-        writer.add_scalar("losses/explained_variance", explained_var, global_step)
-        print("SPS:", int(global_step / (time.time() - start_time)))
-        writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
     envs.close()
     writer.close()

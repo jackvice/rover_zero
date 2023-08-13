@@ -6,6 +6,7 @@ import time
 from distutils.util import strtobool
 
 import gymnasium as gym
+from gymnasium.wrappers import PixelObservationWrapper
 import numpy as np
 import torch
 import torch.nn as nn
@@ -83,10 +84,16 @@ def parse_args():
 def make_env(env_id, idx, capture_video, run_name, gamma):
     def thunk():
         if capture_video:
-            env = gym.make(env_id, render_mode="rgb_array")
+            #env = gym.make(env_id, render_mode="rgb_array")
+            env = PixelObservationWrapper(gym.make(env_id, render_mode="rgb_array"))
         else:
-            env = gym.make(env_id)
-        env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
+            #env = gym.make(env_id)
+            env = PixelObservationWrapper(gym.make(env_id,  render_mode="rgb_array"))
+        #env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
+        next_obs, _ = env.reset()
+        print("next_obs.keys()", next_obs.keys())
+        print("next_obs[pixels].shape", next_obs['pixels'].shape)
+        exit()
         env = gym.wrappers.RecordEpisodeStatistics(env)
         if capture_video:
             if idx == 0:
@@ -96,6 +103,12 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
         env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
         env = gym.wrappers.NormalizeReward(env, gamma=gamma)
         env = gym.wrappers.TransformReward(env, lambda reward: np.clip(reward, -10, 10))
+        #env.reset()
+        #env = PixelObservationWrapper(env)
+        next_obs, _ = env.reset()
+        print("next_obs.keys()", next_obs.keys())
+        exit()
+        print("next_obs[pixels].shape", next_obs[pixels].shape)
         return env
 
     return thunk
@@ -105,7 +118,6 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer
-
 
 class Agent(nn.Module):
     def __init__(self, envs):
@@ -136,11 +148,6 @@ class Agent(nn.Module):
         probs = Normal(action_mean, action_std)
         if action is None:
             action = probs.sample()
-        print('\nactions: ',action)
-        print("probs.log_prob(action).sum(1): ", probs.log_prob(action).sum(1))
-        print("probs.entropy().sum(1): ", probs.entropy().sum(1))
-        print("self.critic(x): ", self.critic(x), "\n")
-        #exit()
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
 
 
@@ -183,6 +190,8 @@ if __name__ == "__main__":
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
+    next_obs, _ = envs.reset()
+    print("next_obs[pixels].shape", next_obs[pixels].shape)
     obs = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(device)
     actions = torch.zeros((args.num_steps, args.num_envs) + envs.single_action_space.shape).to(device)
     logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
@@ -208,29 +217,16 @@ if __name__ == "__main__":
             optimizer.param_groups[0]["lr"] = lrnow
 
         for step in range(0, args.num_steps):
-            print("\n ########## step",step)
+            #print("\n ########## step",step)
             global_step += 1 * args.num_envs
             obs[step] = next_obs
             dones[step] = next_done
-            #print("next_obs",next_obs)
-            #print("obs[step]", obs[step], ",  step:", step)
-            #print("next_done",next_done)
-            #print("dones:", dones)
-            #print("###########\n")
-            #if step == 1:
-            #    exit()
-
 
             # ALGO LOGIC: action logic
             with torch.no_grad():
                 action, logprob, _, value = agent.get_action_and_value(next_obs)
                 values[step] = value.flatten()
 
-            #########
-            #print("logprob shape:", logprob.shape)
-            #print("logprob[0]:", logprob[0])
-            ##########
-            
             actions[step] = action
             logprobs[step] = logprob
             
@@ -288,15 +284,7 @@ if __name__ == "__main__":
 
                 _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds], b_actions[mb_inds])
                 logratio = newlogprob - b_logprobs[mb_inds]
-                print("\nb_obs[mb_inds]: ", b_obs[mb_inds])
-                print("b_obs[mb_inds]:  ", b_actions[mb_inds])                
-                print("mb_inds:  ", mb_inds)
-                #print("logratio: ", logratio)
-                print("newlogprob: ",newlogprob)
-                print("b_logprobs[mb_inds]:  ", b_logprobs[mb_inds],"\n")
                 ratio = logratio.exp()
-                exit()
-
                 with torch.no_grad():
                     # calculate approx_kl http://joschu.net/blog/kl-approx.html
                     old_approx_kl = (-logratio).mean()
@@ -342,8 +330,6 @@ if __name__ == "__main__":
         y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
         var_y = np.var(y_true)
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
-
-        # TRY NOT TO MODIFY: record rewards for plotting purposes
         writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
         writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
         writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
@@ -355,5 +341,6 @@ if __name__ == "__main__":
         print("SPS:", int(global_step / (time.time() - start_time)))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
+        
     envs.close()
     writer.close()
