@@ -13,6 +13,8 @@ import torch.optim as optim
 from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
 
+import warnings
+warnings.filterwarnings("ignore")
 
 def parse_args():
     # fmt: off
@@ -43,7 +45,7 @@ def parse_args():
         help="total timesteps of the experiments")
     parser.add_argument("--learning-rate", type=float, default=3e-4,
         help="the learning rate of the optimizer")
-    parser.add_argument("--num-envs", type=int, default=1,
+    parser.add_argument("--num-envs", type=int,                       default=1,
         help="the number of parallel game environments")
     parser.add_argument("--num-steps", type=int, default=2048,
         help="the number of steps to run in each environment per policy rollout")
@@ -134,7 +136,11 @@ class Agent(nn.Module):
         probs = Normal(action_mean, action_std)
         if action is None:
             action = probs.sample()
-        #print('actions',action)
+        print('\nactions: ',action)
+        print("probs.log_prob(action).sum(1): ", probs.log_prob(action).sum(1))
+        print("probs.entropy().sum(1): ", probs.entropy().sum(1))
+        print("self.critic(x): ", self.critic(x), "\n")
+        #exit()
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
 
 
@@ -182,6 +188,8 @@ if __name__ == "__main__":
     logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
     rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
     dones = torch.zeros((args.num_steps, args.num_envs)).to(device)
+    
+    #exit()
     values = torch.zeros((args.num_steps, args.num_envs)).to(device)
 
     # TRY NOT TO MODIFY: start the game
@@ -193,16 +201,25 @@ if __name__ == "__main__":
     num_updates = args.total_timesteps // args.batch_size
 
     for update in range(1, num_updates + 1):
-        # Annealing the rate if instructed to do so.
+         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
             frac = 1.0 - (update - 1.0) / num_updates
             lrnow = frac * args.learning_rate
             optimizer.param_groups[0]["lr"] = lrnow
 
         for step in range(0, args.num_steps):
+            print("\n ########## step",step)
             global_step += 1 * args.num_envs
             obs[step] = next_obs
             dones[step] = next_done
+            #print("next_obs",next_obs)
+            #print("obs[step]", obs[step], ",  step:", step)
+            #print("next_done",next_done)
+            #print("dones:", dones)
+            #print("###########\n")
+            #if step == 1:
+            #    exit()
+
 
             # ALGO LOGIC: action logic
             with torch.no_grad():
@@ -210,8 +227,8 @@ if __name__ == "__main__":
                 values[step] = value.flatten()
 
             #########
-            print("logprob shape:", logprob.shape)
-            print("logprob[0]:", logprob[0])
+            #print("logprob shape:", logprob.shape)
+            #print("logprob[0]:", logprob[0])
             ##########
             
             actions[step] = action
@@ -271,7 +288,14 @@ if __name__ == "__main__":
 
                 _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds], b_actions[mb_inds])
                 logratio = newlogprob - b_logprobs[mb_inds]
+                print("\nb_obs[mb_inds]: ", b_obs[mb_inds])
+                print("b_obs[mb_inds]:  ", b_actions[mb_inds])                
+                print("mb_inds:  ", mb_inds)
+                #print("logratio: ", logratio)
+                print("newlogprob: ",newlogprob)
+                print("b_logprobs[mb_inds]:  ", b_logprobs[mb_inds],"\n")
                 ratio = logratio.exp()
+                exit()
 
                 with torch.no_grad():
                     # calculate approx_kl http://joschu.net/blog/kl-approx.html
