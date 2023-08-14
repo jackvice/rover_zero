@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.distributions.categorical import Categorical
 
-import gym
+import gymnasium as gym
 from utils import plot_learning_curve
 
 class PPOMemory:
@@ -83,7 +83,7 @@ class Agent_atari(nn.Module):
             action = probs.sample()
         return action, probs.log_prob(action), probs.entropy(), self.critic(hidden)
 
-class ActorNetworkNew(nn.Module):
+class ActorNetwork(nn.Module):
     def __init__(self, n_actions, input_dims, alpha,
             fc1_dims=256, fc2_dims=256, chkpt_dir='tmp/ppo'):
         super(ActorNetwork, self).__init__()
@@ -118,7 +118,7 @@ class ActorNetworkNew(nn.Module):
     def load_checkpoint(self):
         self.load_state_dict(T.load(self.checkpoint_file))
 
-class CriticNetworkNew(nn.Module):
+class CriticNetwork(nn.Module):
     def __init__(self, input_dims, alpha, fc1_dims=256, fc2_dims=256,
             chkpt_dir='tmp/ppo'):
         super(CriticNetwork, self).__init__()
@@ -151,9 +151,8 @@ class CriticNetworkNew(nn.Module):
 
     def load_checkpoint(self):
         self.load_state_dict(T.load(self.checkpoint_file))
-
-################# original
-class ActorNetwork(nn.Module):
+    
+class ActorNetwork_origin(nn.Module):
     def __init__(self, n_actions, input_dims, alpha,
             fc1_dims=256, fc2_dims=256, chkpt_dir='tmp/ppo'):
         super(ActorNetwork, self).__init__()
@@ -183,8 +182,7 @@ class ActorNetwork(nn.Module):
     def load_checkpoint(self):
         self.load_state_dict(T.load(self.checkpoint_file))
 
-################# original
-class CriticNetwork(nn.Module): 
+class CriticNetwork_origin(nn.Module):
     def __init__(self, input_dims, alpha, fc1_dims=256, fc2_dims=256,
             chkpt_dir='tmp/ppo'):
         super(CriticNetwork, self).__init__()
@@ -304,8 +302,8 @@ class Agent:
 
 
 if __name__ == '__main__':
-    #env = gym.make('CartPole-v1')
-    env = gym.make('MountainCar-v0')
+    env = gym.make('CartPole-v1')
+    #env = gym.make('')
     N = 20
     batch_size = 5
     n_epochs = 4
@@ -346,9 +344,8 @@ if __name__ == '__main__':
         #    best_score = avg_score
         #    agent.save_models()
 
-        print('episode', i, 'score %.1f' % score, 'time_steps', n_steps,
-              'learning_steps', learn_iters, '\t avg score %.1f' % avg_score)
-                
+        print('episode', i, 'score %.1f' % score, 'avg score %.1f' % avg_score,
+                'time_steps', n_steps, 'learning_steps', learn_iters)
     x = [i+1 for i in range(len(score_history))]
     plot_learning_curve(x, score_history, figure_file)
 
