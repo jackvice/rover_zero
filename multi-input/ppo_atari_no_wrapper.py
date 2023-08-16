@@ -5,13 +5,16 @@ import random
 import time
 from distutils.util import strtobool
 
-import gymnasium as gym
+#import gymnasium as gym
+import gym
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
+
+from collections import deque
 
 from stable_baselines3.common.atari_wrappers import (  # isort:skip
     ClipRewardEnv,
@@ -195,39 +198,79 @@ if __name__ == "__main__":
     # TRY NOT TO MODIFY: start the game
     global_step = 0
     start_time = time.time()
-    #next_obs = envs.reset()[0]
-    next_obs = torch.Tensor(envs.reset()[0]).to(device)
+    initial_obs = envs.reset()[0]
+    # Repeat the single frame observation 4 times to match the expected input of the CNN
+    initial_obs_tensor = torch.Tensor(initial_obs).to(device)
+    next_obs = initial_obs_tensor.unsqueeze(0).expand(-1, 4, -1, -1)  # Shape: [1, 4, 84, 84]
+
     next_done = torch.zeros(args.num_envs).to(device)
     num_updates = args.total_timesteps // args.batch_size
 
     stacked_frames = deque([], maxlen=4)
-    best_reward = 0
+
     for update in range(1, num_updates + 1):
         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
             frac = 1.0 - (update - 1.0) / num_updates
             lrnow = frac * args.learning_rate
             optimizer.param_groups[0]["lr"] = lrnow
-
+            
+        method = 'frame_duplication'
         for step in range(0, args.num_steps):
             global_step += 1 * args.num_envs
-            obs[step] = next_obs
+            
+            if len(stacked_frames) == 4:
+                obs[step] = torch.stack(list(stacked_frames), dim=1)
+            else:
+                obs[step, :next_obs.shape[1], :, :] = next_obs
+
+            obs[step] = torch.stack(list(stacked_frames), dim=1) if len(stacked_frames) == 4 else next_obs
             dones[step] = next_done
 
+            print(obs[step].size())
+            exit()
             # ALGO LOGIC: action logic
             with torch.no_grad():
-                action, logprob, _, value = agent.get_action_and_value(next_obs)
+                action, logprob, _, value = agent.get_action_and_value(obs[step] if len(stacked_frames) == 4 else next_obs)
                 values[step] = value.flatten()
             actions[step] = action
             logprobs[step] = logprob
 
-            # TRY NOT TO MODIFY: execute the game and log data.
-            next_obs, reward, done, truncated, infos = envs.step(action.cpu().numpy())
-            rewards[step] = torch.tensor(reward).to(device).view(-1)
-            next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(done).to(device)
-            
-            if reward > best_reward:
-                best_reward = reward
+            # This replaces the MaxAndSkipEnv functionality
+            last_frames = []
+            last_rewards = []
+            frames_from_new_episode = []
+
+            for _ in range(4):  # Repeat the same action 4 times
+                next_o, reward, done, info = envs.step(action.cpu().numpy())
+                last_frames.append(torch.Tensor(next_o))
+                last_rewards.append(reward)
+
+                # Check if the episode ended
+                if done:
+                    if method == 'zero_padding':
+                        # Fill the remaining frames with zeros
+                        for _ in range(4 - len(last_frames)):
+                            zero_frame = torch.zeros_like(torch.Tensor(next_o))
+                            last_frames.append(zero_frame)
+                        break
+                    elif method == 'frame_duplication':
+                        # Duplicate the last frame
+                        for _ in range(4 - len(last_frames)):
+                            last_frames.append(torch.Tensor(next_o))
+                        break
+                    elif method == 'stack_across':
+                        frames_from_new_episode.append(torch.Tensor(next_o))
+                    else:
+                        raise ValueError("Unknown method")
+
+            # Combine frames from the ended episode and the new episode
+            if method == 'stack_across' and len(frames_from_new_episode) > 0:
+                last_frames = last_frames[:4-len(frames_from_new_episode)] + frames_from_new_episode
+
+            reward = sum(last_rewards)
+        
+
             if "final_info" in infos:
                 for info in infos["final_info"]:
                     # Skip the envs that are not done
