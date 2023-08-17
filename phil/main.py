@@ -1,4 +1,4 @@
-import gymnasium as gym
+import gym
 import numpy as np
 from ppo_torch import Agent
 from utils import plot_learning_curve
@@ -25,12 +25,11 @@ if __name__ == '__main__':
 
     for i in range(n_games):
         observation = env.reset()
-        observation = observation[0].reshape(1, -1)[0]
         done = False
         score = 0
         while not done:
             action, prob, val = agent.choose_action(observation)
-            observation_, reward, done, info, info2 = env.step(action)
+            observation_, reward, done, info = env.step(action)
             n_steps += 1
             score += reward
             agent.remember(observation, action, prob, val, reward, done)
