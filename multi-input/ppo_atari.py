@@ -186,6 +186,7 @@ if __name__ == "__main__":
 
     # ALGO Logic: Storage setup
     obs = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(device)
+    print("obs.shape",obs.shape)
     actions = torch.zeros((args.num_steps, args.num_envs) + envs.single_action_space.shape).to(device)
     logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
     rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
@@ -197,6 +198,8 @@ if __name__ == "__main__":
     start_time = time.time()
     #next_obs = envs.reset()[0]
     next_obs = torch.Tensor(envs.reset()[0]).to(device)
+    print(next_obs.shape)
+    exit()
     next_done = torch.zeros(args.num_envs).to(device)
     num_updates = args.total_timesteps // args.batch_size
 

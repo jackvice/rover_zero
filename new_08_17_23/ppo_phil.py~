@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.distributions.categorical import Categorical
 from utils import plot_learning_curve
-
+from collections import deque
 
 
 class PPOMemory:
@@ -53,26 +53,40 @@ class PPOMemory:
         self.vals = []
 
 class ActorNetwork(nn.Module):
-    def __init__(self, n_actions, input_dims, alpha,
-            fc1_dims=256, fc2_dims=256, chkpt_dir='tmp/ppo'):
+    def __init__(self, n_actions, input_dims, alpha, fc1_dims=256, fc2_dims=256, chkpt_dir='tmp/ppo'):
         super(ActorNetwork, self).__init__()
 
         self.checkpoint_file = os.path.join(chkpt_dir, 'actor_torch_ppo')
+        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
+
+        # Assuming the input_dims is for a 2D image. Adjust if different.
+        self.conv_layers = nn.Sequential(
+            nn.Conv2d(4, 32, 8, stride=4),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, 4, stride=2),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, 3, stride=1),
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Linear(64 * 7 * 7, 512),  # Adjust this linear size based on input_dims and your CNN architecture
+            nn.ReLU()
+        )
+
         self.actor = nn.Sequential(
-                nn.Linear(*input_dims, fc1_dims),
-                nn.ReLU(),
-                nn.Linear(fc1_dims, fc2_dims),
-                nn.ReLU(),
-                nn.Linear(fc2_dims, n_actions),
-                nn.Softmax(dim=-1)
+            nn.Linear(512, fc1_dims),
+            nn.ReLU(),
+            nn.Linear(fc1_dims, fc2_dims),
+            nn.ReLU(),
+            nn.Linear(fc2_dims, n_actions),
+            nn.Softmax(dim=-1)
         )
 
         self.optimizer = optim.Adam(self.parameters(), lr=alpha)
-        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.to(self.device)
 
     def forward(self, state):
-        dist = self.actor(state)
+        features = self.conv_layers(state)
+        dist = self.actor(features)
         dist = Categorical(dist)
         
         return dist
@@ -83,26 +97,41 @@ class ActorNetwork(nn.Module):
     def load_checkpoint(self):
         self.load_state_dict(T.load(self.checkpoint_file))
 
+
 class CriticNetwork(nn.Module):
-    def __init__(self, input_dims, alpha, fc1_dims=256, fc2_dims=256,
-            chkpt_dir='tmp/ppo'):
+    def __init__(self, input_dims, alpha, fc1_dims=256, fc2_dims=256, chkpt_dir='tmp/ppo'):
         super(CriticNetwork, self).__init__()
 
         self.checkpoint_file = os.path.join(chkpt_dir, 'critic_torch_ppo')
+        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
+
+        # Assuming the input_dims is for a 2D image. Adjust if different.
+        self.conv_layers = nn.Sequential(
+            nn.Conv2d(4, 32, 8, stride=4), # atari is (4, 32, 8)
+            nn.ReLU(),
+            nn.Conv2d(32, 64, 4, stride=2),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, 3, stride=1),
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Linear(64 * 7 * 7, 512),  # Adjust this linear size based on input_dims and your CNN architecture
+            nn.ReLU()
+        )
+
         self.critic = nn.Sequential(
-                nn.Linear(*input_dims, fc1_dims),
-                nn.ReLU(),
-                nn.Linear(fc1_dims, fc2_dims),
-                nn.ReLU(),
-                nn.Linear(fc2_dims, 1)
+            nn.Linear(512, fc1_dims),
+            nn.ReLU(),
+            nn.Linear(fc1_dims, fc2_dims),
+            nn.ReLU(),
+            nn.Linear(fc2_dims, 1)
         )
 
         self.optimizer = optim.Adam(self.parameters(), lr=alpha)
-        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.to(self.device)
 
     def forward(self, state):
-        value = self.critic(state)
+        features = self.conv_layers(state)
+        value = self.critic(features)
 
         return value
 
@@ -112,6 +141,8 @@ class CriticNetwork(nn.Module):
     def load_checkpoint(self):
         self.load_state_dict(T.load(self.checkpoint_file))
 
+
+        
 class Agent:
     def __init__(self, n_actions, input_dims, gamma=0.99, alpha=0.0003, gae_lambda=0.95,
             policy_clip=0.2, batch_size=64, n_epochs=10):
@@ -119,7 +150,7 @@ class Agent:
         self.policy_clip = policy_clip
         self.n_epochs = n_epochs
         self.gae_lambda = gae_lambda
-
+        print('alpha', alpha)
         self.actor = ActorNetwork(n_actions, input_dims, alpha)
         self.critic = CriticNetwork(input_dims, alpha)
         self.memory = PPOMemory(batch_size)
@@ -203,14 +234,15 @@ class Agent:
 
 
 if __name__ == '__main__':
-    env = gym.make('CartPole-v0')
+    #env = gym.make('CartPole-v0')
+    env = gym.make('BreakoutNoFrameskip-v4')
     N = 20
     batch_size = 5
     n_epochs = 4
     alpha = 0.0003
     agent = Agent(n_actions=env.action_space.n, batch_size=batch_size, 
                     alpha=alpha, n_epochs=n_epochs, 
-                    input_dims=env.observation_space.shape)
+                    input_dims=(4,*env.observation_space.shape) ) # (4, 210, 160, 3)
     n_games = 300
 
     figure_file = 'plots/cartpole.png'
@@ -222,13 +254,28 @@ if __name__ == '__main__':
     avg_score = 0
     n_steps = 0
 
+    frame_buffer = deque(maxlen=4)
+    for _ in range(4):
+        frame_buffer.append(np.zeros(env.observation_space.shape))
+
     for i in range(n_games):
+        #observation = env.reset()[0]
+        ###print(observation)
+        #exit()
         observation = env.reset()[0]
+        for _ in range(4):  # Fill the buffer with the initial observation
+            frame_buffer.append(observation)
+        print("frame_buffer shape", np.array(frame_buffer).shape)
         done = False
         score = 0
         while not done:
-            action, prob, val = agent.choose_action(observation)
+            # Stack the last 4 frames together to form the input to the network
+            stacked_frames = np.stack(frame_buffer, axis=0)
+            action, prob, val = agent.choose_action(stacked_frames)
+            #action, prob, val = agent.choose_action(observation)
+            
             observation_, reward, done, truncated, info = env.step(action)
+            frame_buffer.append(observation_)  # Add the new observation to the buffer
             n_steps += 1
             score += reward
             agent.remember(observation, action, prob, val, reward, done)

@@ -111,7 +111,10 @@ class CriticNetwork(nn.Module):
 
     def load_checkpoint(self):
         self.load_state_dict(T.load(self.checkpoint_file))
+
+
 """
+
 class ActorNetwork(nn.Module):
     def __init__(self, n_actions, input_dims, alpha, fc1_dims=256, fc2_dims=256, chkpt_dir='tmp/ppo'):
         super(ActorNetwork, self).__init__()
@@ -293,6 +296,86 @@ class Agent:
         self.memory.clear_memory()               
 
 
+
+class ActorNetwork(nn.Module):
+    def __init__(self, n_actions, input_dims, alpha, fc1_dims=512):
+        super(ActorNetwork, self).__init__()
+
+        self.conv_layers = nn.Sequential(
+            nn.Conv2d(12, 32, 8, 4),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, 4, 2),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, 3, 1),
+            nn.ReLU(),
+        )
+
+        self.fc_input_dims = self.calculate_conv_output_dims(input_dims)
+
+        self.fc = nn.Sequential(
+            nn.Linear(self.fc_input_dims, fc1_dims),
+            nn.ReLU(),
+            nn.Linear(fc1_dims, n_actions),
+            nn.Softmax(dim=-1)  # Adding a softmax to get probabilities of actions
+        )
+
+        self.optimizer = optim.Adam(self.parameters(), lr=alpha)
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        self.to(self.device)
+
+    def forward(self, state):
+        conv_out = self.conv_layers(state)
+        flat = conv_out.view(conv_out.size(0), -1)  # flatten the tensor
+        actions = self.fc(flat)
+        return actions
+
+    def calculate_conv_output_dims(self, input_dims):
+        # Dummy tensor to simulate a forward pass. We don't require gradients.
+        dummy_data = torch.ones(1, *input_dims)
+        with torch.no_grad():
+            conv_out = self.conv_layers(dummy_data)
+        return int(np.prod(conv_out.size()))
+
+
+class CriticNetwork(nn.Module):
+    def __init__(self, input_dims, alpha, fc1_dims=512):
+        super(CriticNetwork, self).__init__()
+
+        self.conv_layers = nn.Sequential(
+            nn.Conv2d(12, 32, 8, 4),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, 4, 2),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, 3, 1),
+            nn.ReLU(),
+        )
+
+        self.fc_input_dims = self.calculate_conv_output_dims(input_dims)
+
+        self.fc = nn.Sequential(
+            nn.Linear(self.fc_input_dims, fc1_dims),
+            nn.ReLU(),
+            nn.Linear(fc1_dims, 1)  # Critic outputs a single scalar value
+        )
+
+        self.optimizer = optim.Adam(self.parameters(), lr=alpha)
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        self.to(self.device)
+
+    def forward(self, state):
+        conv_out = self.conv_layers(state)
+        flat = conv_out.view(conv_out.size(0), -1)  # flatten the tensor
+        value = self.fc(flat)
+        return value
+
+    def calculate_conv_output_dims(self, input_dims):
+        # Dummy tensor to simulate a forward pass. We don't require gradients.
+        dummy_data = torch.ones(1, *input_dims)
+        with torch.no_grad():
+            conv_out = self.conv_layers(dummy_data)
+        return int(np.prod(conv_out.size()))
+
+        
 if __name__ == '__main__':
     #env = gym.make('CartPole-v0')
     env = gym.make('BreakoutNoFrameskip-v4')
