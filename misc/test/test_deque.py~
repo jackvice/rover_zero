@@ -1,0 +1,20 @@
+import numpy as np
+from collections import deque
+
+# Let's create a stack using deque for 4D matrices
+stack = deque()
+
+# Create a sample 4D matrix with shape (2, 3, 4, 5)
+tensor1 = np.random.rand(2, 3, 4, 5)
+tensor2 = np.random.rand(2, 3, 4, 5)
+
+# Push tensor1 onto the stack
+stack.append(tensor1)
+
+# For demonstration purposes, let's append tensor2 to tensor1 along axis=1 (second dimension)
+combined_tensor = np.concatenate((stack[-1], tensor2), axis=1)  # this results in a tensor with shape (2, 6, 4, 5)
+
+# Now, let's push the combined_tensor onto the stack
+stack.append(combined_tensor)
+
+print(stack[-1].shape)  # Expected output: (2, 6, 4, 5)

@@ -225,6 +225,8 @@ if __name__ == "__main__":
 
             # TRY NOT TO MODIFY: execute the game and log data.
             next_obs, reward, done, truncated, infos = envs.step(action.cpu().numpy())
+            print("next_obs.shape after step", next_obs.shape)
+            exit()
             rewards[step] = torch.tensor(reward).to(device).view(-1)
             next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(done).to(device)
             
