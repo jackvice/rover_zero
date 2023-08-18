@@ -154,7 +154,7 @@ class Agent(nn.Module):
             action = probs.sample()
         return action, probs.log_prob(action), probs.entropy(), self.critic(hidden)
 
-
+"""
 def preprocess_frame(frame):
     # If necessary, you can perform preprocessing steps here, like resizing, normalization, etc.
     return frame
@@ -170,7 +170,7 @@ def frame_stacker_start(frame_queue):
     #return stacked_frames
 
 # Note: The shape of stacked_frames will be (210, 160, 12) when 4 frames are stacked
-
+"""
 
 def initialize_stack(maxlen=4):
     return deque(maxlen=maxlen)
@@ -182,7 +182,7 @@ def append_to_stack(stack, array):
 def get_current_stack(stack):
     # If the stack isn't full yet, this will pad it with zeros
     while len(stack) < 4:
-        stack.appendleft(np.zeros((1, 1, 84, 84)))
+        stack.appendleft(torch.zeros((1, 1, 84, 84)))
     return np.concatenate(list(stack), axis=1)
 
 
@@ -267,8 +267,15 @@ if __name__ == "__main__":
             actions[step] = action
             logprobs[step] = logprob
 
+            reward = 0
             # TRY NOT TO MODIFY: execute the game and log data.
-            next_obs, reward, done, info = envs.step(action.cpu().numpy())
+            for _ in range(4):
+                next_obs, temp_reward, done, info = envs.step(action.cpu().numpy())
+                reward = reward  + temp_reward
+                stack = append_to_stack(stack,next_obs)
+                if done:
+                    break
+            next_obs = stack
             rewards[step] = torch.tensor(reward).to(device).view(-1)
             next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(done).to(device)
 

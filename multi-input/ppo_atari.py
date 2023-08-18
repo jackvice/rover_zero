@@ -102,7 +102,7 @@ def make_env(env_id, seed, idx, capture_video, run_name):
         env = ClipRewardEnv(env)
         env = gym.wrappers.ResizeObservation(env, (84, 84))
         env = gym.wrappers.GrayScaleObservation(env)
-        env = gym.wrappers.FrameStack(env, 4)
+        #env = gym.wrappers.FrameStack(env, 4)
         env.seed(seed)
         env.action_space.seed(seed)
         env.observation_space.seed(seed)
@@ -198,8 +198,9 @@ if __name__ == "__main__":
     start_time = time.time()
     #next_obs = envs.reset()[0]
     next_obs = torch.Tensor(envs.reset()[0]).to(device)
+    print("next_obs", next_obs)
     print("next_obs.shape", next_obs.shape)
-    #exit()
+    exit()
     next_done = torch.zeros(args.num_envs).to(device)
     num_updates = args.total_timesteps // args.batch_size
 
