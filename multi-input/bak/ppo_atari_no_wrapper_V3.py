@@ -232,9 +232,7 @@ if __name__ == "__main__":
             exit()
             # ALGO LOGIC: action logic
             with torch.no_grad():
-                action, logprob, _, value = agent.get_action_and_value(obs[step] 
-                                                                       if len(stacked_frames)
-                                                                       == 4 else next_obs)
+                action, logprob, _, value = agent.get_action_and_value(obs[step] if len(stacked_frames) == 4 else next_obs)
                 values[step] = value.flatten()
             actions[step] = action
             logprobs[step] = logprob

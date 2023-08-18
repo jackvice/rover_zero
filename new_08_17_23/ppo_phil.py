@@ -52,8 +52,14 @@ class PPOMemory:
         self.dones = []
         self.vals = []
 
+def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
+    torch.nn.init.orthogonal_(layer.weight, std)
+    torch.nn.init.constant_(layer.bias, bias_const)
+    return layer
+        
 class ActorNetwork(nn.Module):
-    def __init__(self, n_actions, input_dims, alpha, fc1_dims=256, fc2_dims=256, chkpt_dir='tmp/ppo'):
+    def __init__(self, n_actions, input_dims, alpha,
+                 fc1_dims=256, fc2_dims=256, chkpt_dir='tmp/ppo'):
         super(ActorNetwork, self).__init__()
 
         self.checkpoint_file = os.path.join(chkpt_dir, 'actor_torch_ppo')
@@ -61,17 +67,18 @@ class ActorNetwork(nn.Module):
 
         # Assuming the input_dims is for a 2D image. Adjust if different.
         self.conv_layers = nn.Sequential(
-            nn.Conv2d(4, 32, 8, stride=4),
+            layer_init(nn.Conv2d(4, 32, 8, stride=4)),
             nn.ReLU(),
-            nn.Conv2d(32, 64, 4, stride=2),
+            layer_init(nn.Conv2d(32, 64, 4, stride=2)),
             nn.ReLU(),
-            nn.Conv2d(64, 64, 3, stride=1),
+            layer_init(nn.Conv2d(64, 64, 3, stride=1)),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(64 * 7 * 7, 512),  # Adjust this linear size based on input_dims and your CNN architecture
+            layer_init(nn.Linear(64 * 7 * 7, 512)),  # Adjust this linear size based on input_dims and your CNN architecture
             nn.ReLU()
         )
 
+        #self.actor = layer_init(nn.Linear(512, env.action_space.n), std=0.01)
         self.actor = nn.Sequential(
             nn.Linear(512, fc1_dims),
             nn.ReLU(),
