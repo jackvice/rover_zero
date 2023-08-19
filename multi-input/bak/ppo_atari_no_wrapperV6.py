@@ -15,9 +15,6 @@ from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 
 from collections import deque
-import warnings
-
-warnings.filterwarnings("ignore")
 
 #from stable_baselines3.common.atari_wrappers import (  # isort:skip
 #    ClipRewardEnv,
@@ -32,7 +29,6 @@ warnings.filterwarnings("ignore")
 2. unvectorize environment
 3. 
 """
-
 
 def parse_args():
     # fmt: off
@@ -258,19 +254,19 @@ if __name__ == "__main__":
     next_obs = get_reset_stack(stack, next_obs, num_frames, x, y)
     print("next_obs.shape", next_obs.shape)
     #exit()
-
+ 
     for update in range(1, num_updates + 1):
         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
             frac = 1.0 - (update - 1.0) / num_updates
             lrnow = frac * args.learning_rate
             optimizer.param_groups[0]["lr"] = lrnow
-        avg_reward = 0
+
         for step in range(0, args.num_steps):
-            #print("step", step)
+            print("step", step)
             global_step += 1 * args.num_envs
-            #print("before obs[step], next_obs.shape", next_obs.shape)
-            #print("obs.shape", obs.shape)
+            print("before obs[step], next_obs.shape", next_obs.shape)
+            print("obs.shape", obs.shape)
             obs[step] = next_obs
             dones[step] = next_done
 
@@ -280,23 +276,20 @@ if __name__ == "__main__":
                 values[step] = value.flatten()
             actions[step] = action
             logprobs[step] = logprob
-            #reward = 0
+            reward = 0
             # TRY NOT TO MODIFY: execute the game and log data.
             for _ in range(4):
-                next_obs, reward, done, truncated, infos = envs.step(action.cpu().numpy())
-                #reward = reward  + temp_reward
+                next_obs, temp_reward, done, truncated, info = envs.step(action.cpu().numpy())
+                reward = reward  + temp_reward
                 stack = append_to_stack(stack,torch.reshape(torch.from_numpy(next_obs), (1, 1, x, y) ) )
                 if done:
                     break
-            #if step % 100 == 0:
-            #    print("########## reward", reward)
-            avg_reward = avg_reward + reward
             next_obs = get_current_stack(stack)
-            #print("next_obs.shape", next_obs.shape)
+            print("next_obs.shape", next_obs.shape)
             #exit()
             rewards[step] = torch.tensor(reward).to(device).view(-1)
             next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(done).to(device)
-            """
+
             for info in infos["final_info"]:
                 # Skip the envs that are not done
                 if info is None:
@@ -305,7 +298,7 @@ if __name__ == "__main__":
                 #print("step reward", reward)
                 writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
                 writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
-           
+            """
             for item in info:
                 if "episode" in item.keys():
                     print(f"global_step={global_step}, episodic_return={item['episode']['r']}")
@@ -332,7 +325,6 @@ if __name__ == "__main__":
 
         # flatten the batch
         b_obs = obs.reshape((-1,) + envs.single_observation_space.shape)
-        b_obs = obs.reshape((-1,) + (num_frames, x, y))
         b_logprobs = logprobs.reshape(-1)
         b_actions = actions.reshape((-1,) + envs.single_action_space.shape)
         b_advantages = advantages.reshape(-1)
@@ -408,8 +400,7 @@ if __name__ == "__main__":
         writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
         writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
-        print("SPS:", int(global_step / (time.time() - start_time)), ',  avg_reward:',
-              avg_reward / args.num_steps)
+        print("SPS:", int(global_step / (time.time() - start_time)))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
     envs.close()
