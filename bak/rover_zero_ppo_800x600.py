@@ -19,17 +19,24 @@ from enum import Enum
 from gym.spaces import Box
 from gym.error import DependencyNotInstalled
 from frame_stack import FrameStack
-from gym.wrappers.pixel_observation import PixelObservationWrapper
+
 warnings.filterwarnings("ignore")
 
+#from stable_baselines3.common.atari_wrappers import (  # isort:skip
+#    ClipRewardEnv,
+#    EpisodicLifeEnv,
+#    FireResetEnv,
+#    MaxAndSkipEnv,
+#    NoopResetEnv,
+#)
 
 AtariStepReturn = Tuple[np.ndarray, SupportsFloat, bool, bool, Dict[str, Any]]
 
 def main():
-    #x = 800
-    #y = 600
-    x = 84
-    y = 84
+    x = 800
+    y = 600
+    #x = 84
+    #y = 84
     num_frames = 4
     args = parse_args()
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
@@ -128,6 +135,7 @@ def main():
                     #writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
                     #writer.add_scalar("charts/epsilon", epsilon, global_step)
 
+            
             
         # bootstrap value if not done
         with torch.no_grad():
@@ -244,7 +252,6 @@ def make_env(env_id, seed, idx, capture_video, run_name, num_frames, x, y):
         #if "FIRE" in env.unwrapped.get_action_meanings():
         #    env = FireResetEnv(env)
         env = ClipRewardEnv(env)
-        env = PixelObservationWrapper(env)
         env = gym.wrappers.ResizeObservation(env, (x, y))
         env = gym.wrappers.GrayScaleObservation(env)
         #env = gym.wrappers.FrameStack(env, 4)
@@ -263,7 +270,7 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     return layer
 
 
-class Agent800(nn.Module):
+class Agent(nn.Module):
     def __init__(self, envs):
         super().__init__()
         self.network = nn.Sequential(
@@ -293,7 +300,7 @@ class Agent800(nn.Module):
 
 
 
-class Agent(nn.Module):
+class Agent84(nn.Module):
     def __init__(self, envs):
         super().__init__()
         self.network = nn.Sequential(
@@ -412,7 +419,6 @@ def parse_args():
                         #default="ALE/Berzerk-v5",
                         #default="MsPacmanNoFrameskip-v0",
                         default="BreakoutNoFrameskip-v4",
-                        default="LunarLander-v2",
                         help="the id of the environment")
     parser.add_argument("--total-timesteps", type=int, default=10000000,
         help="total timesteps of the experiments")

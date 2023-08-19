@@ -1,0 +1,11 @@
+import gym
+env = PixelObservationWrapper(gym.make('CarRacing-v1', render_mode="rgb_array"))
+obs = env.reset()
+print('obs.keys())', obs.keys())
+print('obs[pixels].shape', obs['pixels'].shape)
+env = PixelObservationWrapper(gym.make('CarRacing-v1', render_mode="rgb_array"),
+                              pixels_only=False)
+
+print('obs.keys())', obs.keys())
+print('obs[pixels].shape', obs['pixels'].shape)
+print('obs[state].shape',obs['state'].shape)
