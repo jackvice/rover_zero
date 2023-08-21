@@ -1,4 +1,6 @@
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppo_ataripy
+
+# conda activate torch
 import argparse
 import os
 import random
@@ -19,17 +21,14 @@ from enum import Enum
 from gym.spaces import Box
 from gym.error import DependencyNotInstalled
 from frame_stack import FrameStack
-from gym.wrappers.pixel_observation import PixelObservationWrapper
+import warnings
 warnings.filterwarnings("ignore")
-
 
 AtariStepReturn = Tuple[np.ndarray, SupportsFloat, bool, bool, Dict[str, Any]]
 
 def main():
-    #x = 800
-    #y = 600
-    x = 84
-    y = 84
+    height = 400
+    width = 600
     num_frames = 4
     args = parse_args()
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
@@ -48,7 +47,8 @@ def main():
     writer = SummaryWriter(f"runs/{run_name}")
     writer.add_text(
         "hyperparameters",
-        "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
+        "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|"
+                                                 for key, value in vars(args).items()])),
     )
 
     # TRY NOT TO MODIFY: seeding
@@ -61,18 +61,25 @@ def main():
 
     # env setup
     envs = gym.vector.SyncVectorEnv(
-        [make_env(args.env_id, args.seed + i, i, args.capture_video, run_name, num_frames, x, y) for i in range(args.num_envs)]
+        [make_env(args.env_id, args.seed + i, i, args.capture_video,
+                  run_name, num_frames, height, width) for i in range(args.num_envs)]
     )
-    assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
+    assert isinstance(envs.single_action_space, gym.spaces.Discrete), \
+        "only discrete action space is supported"
 
     agent = Agent(envs).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
+    print("envs.single_observation_space.shape", envs.single_observation_space.shape)
+    #agent.test_conv_output()
+    
     # ALGO Logic: Storage setup
-    obs = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(device)
+    obs = torch.zeros((args.num_steps, args.num_envs) +
+                      envs.single_observation_space.shape).to(device)
     #print("envs.single_observation_space.shape", envs.single_observation_space.shape)
     #print("obs all steps shape",obs.shape)
-    actions = torch.zeros((args.num_steps, args.num_envs) + envs.single_action_space.shape).to(device)
+    actions = torch.zeros((args.num_steps, args.num_envs) +
+                          envs.single_action_space.shape).to(device)
     logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
     rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
     dones = torch.zeros((args.num_steps, args.num_envs)).to(device)
@@ -81,11 +88,7 @@ def main():
     # TRY NOT TO MODIFY: start the game
     global_step = 0
     start_time = time.time()
-    #next_obs = envs.reset()[0]
     next_obs = torch.Tensor(envs.reset()[0]).to(device)
-    #print("next_obs", next_obs)
-    
-    #exit()
     next_done = torch.zeros(args.num_envs).to(device)
     num_updates = args.total_timesteps // args.batch_size
 
@@ -114,7 +117,8 @@ def main():
             # TRY NOT TO MODIFY: execute the game and log data.
             next_obs, reward, done, truncated, infos = envs.step(action.cpu().numpy())
             rewards[step] = torch.tensor(reward).to(device).view(-1)
-            next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(done).to(device)
+            next_obs, next_done = torch.Tensor(next_obs).to(device), \
+                torch.Tensor(done).to(device)
             
             if reward > best_reward:
                 best_reward = reward
@@ -128,6 +132,7 @@ def main():
                     #writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
                     #writer.add_scalar("charts/epsilon", epsilon, global_step)
 
+            
             
         # bootstrap value if not done
         with torch.no_grad():
@@ -231,7 +236,7 @@ def main():
     
 
 
-def make_env(env_id, seed, idx, capture_video, run_name, num_frames, x, y):
+def make_env(env_id, seed, idx, capture_video, run_name, num_frames, height, width):
     def thunk():
         env = gym.make(env_id)
         env = gym.wrappers.RecordEpisodeStatistics(env)
@@ -240,13 +245,9 @@ def make_env(env_id, seed, idx, capture_video, run_name, num_frames, x, y):
                 env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
         #env = NoopResetEnv(env, noop_max=30)
         env = MaxAndSkipEnv(env, skip=4)
-        #env = EpisodicLifeEnv(env)
-        #if "FIRE" in env.unwrapped.get_action_meanings():
-        #    env = FireResetEnv(env)
         env = ClipRewardEnv(env)
-        env = PixelObservationWrapper(env)
-        env = gym.wrappers.ResizeObservation(env, (x, y))
-        env = gym.wrappers.GrayScaleObservation(env)
+        env = gym.wrappers.ResizeObservation(env, (height, width))
+        #env = gym.wrappers.GrayScaleObservation(env)
         #env = gym.wrappers.FrameStack(env, 4)
         env = FrameStack(env, num_frames)
         env.seed(seed)
@@ -263,7 +264,108 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     return layer
 
 
-class Agent800(nn.Module):
+
+
+"""
+Agent Class:
+This class defines the policy and value function neural network architecture for 
+the Proximal Policy Optimization (PPO) agent. The agent processes visual input 
+from an environment and outputs an action choice and the associated value 
+estimate.
+Attributes:
+    - network (nn.Sequential): A series of convolutional layers followed by fully 
+      connected layers. Designed to extract features from a stacked input 
+      observation of shape (12, 400, 600). The convolutional layers progressively 
+      reduce the spatial dimensions while increasing the depth. The final layer 
+      produces a 512-dimensional feature vector that's used for both the actor 
+      and critic.
+    - actor (nn.Linear): Fully connected layer that outputs action logits for the
+      given environment's action space. Initialized with a small standard 
+      deviation to ensure initial actions are more explorative.
+    - critic (nn.Linear): Fully connected layer that outputs a scalar value 
+      estimate for the input observation. Initialized with a larger standard 
+      deviation to ensure initial value estimates are more conservative.
+Methods:
+    - get_value(x): Accepts a batch of observations and returns the value 
+      estimates for each observation.
+    - get_action_and_value(x, action=None): 
+      Accepts a batch of observations and optionally an action.  Returns the 
+      chosen action (or sampled if not provided), the log probability of that 
+      action, the entropy of the action distribution, and the value estimate.
+Notes:
+    - Observations are normalized by 255.0 to bring the pixel values into the 
+      [0, 1] range.
+    - The reshaping and permute operations ensure the observations are 
+      correctly aligned for the convolutional layers.
+"""
+class Agent(nn.Module): # (3, 600, 400)
+    def __init__(self, envs):
+        super().__init__()
+        self.network = nn.Sequential(
+            # Adjusted for 12 channels
+            layer_init(nn.Conv2d(12, 32, 8, stride=4)),  
+            nn.ReLU(),
+            layer_init(nn.Conv2d(32, 64, 4, stride=2)),
+            nn.ReLU(),
+            layer_init(nn.Conv2d(64, 64, 3, stride=1)),
+            nn.ReLU(),
+            nn.Flatten(),
+            #layer_init(nn.Linear(208384, 512)),
+            layer_init(nn.Linear(209024, 512)),
+            nn.ReLU(),
+        )
+        self.actor = layer_init(nn.Linear(512, envs.single_action_space.n),
+                                std=0.01)
+        self.critic = layer_init(nn.Linear(512, 1), std=1)
+
+    def get_value(self, x):
+        x = x.permute(0, 1, 4, 2, 3).reshape(-1, 12, 400, 600)
+        return self.critic(self.network(x / 255.0))
+
+    def get_action_and_value(self, x, action=None):
+        x = x.permute(0, 1, 4, 2, 3).reshape(-1, 12, 400, 600)
+        hidden = self.network(x / 255.0)
+        logits = self.actor(hidden)
+        probs = Categorical(logits=logits)
+        if action is None:
+            action = probs.sample()
+        return action, probs.log_prob(action), probs.entropy(),  \
+            self.critic(hidden)
+
+
+class AgentNope(nn.Module): # (3, 600, 400)
+    def __init__(self, envs):
+        super().__init__()
+        self.network = nn.Sequential(
+            # Input channels = 3 for RGB
+            layer_init(nn.Conv2d(3, 32, 8, stride=4)),  
+            nn.ReLU(),
+            layer_init(nn.Conv2d(32, 64, 4, stride=2)),
+            nn.ReLU(),
+            layer_init(nn.Conv2d(64, 64, 3, stride=1)),
+            nn.ReLU(),
+            nn.Flatten(),
+            layer_init(nn.Linear(208384, 512)),  # Adjusted input size
+            nn.ReLU(),
+        )
+        self.actor = layer_init(nn.Linear(512, envs.single_action_space.n),
+                                std=0.01)
+        self.critic = layer_init(nn.Linear(512, 1), std=1)
+
+    def get_value(self, x):
+        return self.critic(self.network(x / 255.0))
+
+    def get_action_and_value(self, x, action=None):
+        hidden = self.network(x / 255.0)
+        logits = self.actor(hidden)
+        probs = Categorical(logits=logits)
+        if action is None:
+            action = probs.sample()
+        return action, probs.log_prob(action), probs.entropy(), self.critic(hidden)
+
+
+
+class AgentOLD(nn.Module): # 800x600
     def __init__(self, envs):
         super().__init__()
         self.network = nn.Sequential(
@@ -293,7 +395,7 @@ class Agent800(nn.Module):
 
 
 
-class Agent(nn.Module):
+class Agent84(nn.Module):
     def __init__(self, envs):
         super().__init__()
         self.network = nn.Sequential(
@@ -412,7 +514,6 @@ def parse_args():
                         #default="ALE/Berzerk-v5",
                         #default="MsPacmanNoFrameskip-v0",
                         default="BreakoutNoFrameskip-v4",
-                        default="LunarLander-v2",
                         help="the id of the environment")
     parser.add_argument("--total-timesteps", type=int, default=10000000,
         help="total timesteps of the experiments")

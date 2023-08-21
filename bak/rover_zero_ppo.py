@@ -1,6 +1,4 @@
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppo_ataripy
-
-# conda activate torch
 import argparse
 import os
 import random
@@ -21,24 +19,18 @@ from enum import Enum
 from gym.spaces import Box
 from gym.error import DependencyNotInstalled
 from frame_stack import FrameStack
+from gym.wrappers.pixel_observation import PixelObservationWrapper
+
 import warnings
 warnings.filterwarnings("ignore")
-
-#from stable_baselines3.common.atari_wrappers import (  # isort:skip
-#    ClipRewardEnv,
-#    EpisodicLifeEnv,
-#    FireResetEnv,
-#    MaxAndSkipEnv,
-#    NoopResetEnv,
-#)
 
 AtariStepReturn = Tuple[np.ndarray, SupportsFloat, bool, bool, Dict[str, Any]]
 
 def main():
-    x = 800
-    y = 600
-    #x = 84
-    #y = 84
+    #x = 800
+    #y = 600
+    x = 84
+    y = 84
     num_frames = 4
     args = parse_args()
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
@@ -137,7 +129,6 @@ def main():
                     #writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
                     #writer.add_scalar("charts/epsilon", epsilon, global_step)
 
-            
             
         # bootstrap value if not done
         with torch.no_grad():
@@ -243,7 +234,7 @@ def main():
 
 def make_env(env_id, seed, idx, capture_video, run_name, num_frames, x, y):
     def thunk():
-        env = gym.make(env_id)
+        env = gym.make(env_id, render_mode='rgb_array')
         env = gym.wrappers.RecordEpisodeStatistics(env)
         if capture_video:
             if idx == 0:
@@ -254,9 +245,10 @@ def make_env(env_id, seed, idx, capture_video, run_name, num_frames, x, y):
         #if "FIRE" in env.unwrapped.get_action_meanings():
         #    env = FireResetEnv(env)
         env = ClipRewardEnv(env)
+        #env = PixelObservationWrapper(env)
         env = gym.wrappers.ResizeObservation(env, (x, y))
         env = gym.wrappers.GrayScaleObservation(env)
-        #env = gym.wrappers.FrameStack(env, 4)
+        env = gym.wrappers.FrameStack(env, 4)
         env = FrameStack(env, num_frames)
         env.seed(seed)
         env.action_space.seed(seed)
@@ -272,7 +264,7 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     return layer
 
 
-class Agent(nn.Module):
+class Agent800(nn.Module):
     def __init__(self, envs):
         super().__init__()
         self.network = nn.Sequential(
@@ -302,7 +294,7 @@ class Agent(nn.Module):
 
 
 
-class Agent84(nn.Module):
+class Agent(nn.Module):
     def __init__(self, envs):
         super().__init__()
         self.network = nn.Sequential(
@@ -420,7 +412,8 @@ def parse_args():
     parser.add_argument("--env-id", type=str,
                         #default="ALE/Berzerk-v5",
                         #default="MsPacmanNoFrameskip-v0",
-                        default="BreakoutNoFrameskip-v4",
+                        #default="BreakoutNoFrameskip-v4",
+                        default="LunarLander-v2",
                         help="the id of the environment")
     parser.add_argument("--total-timesteps", type=int, default=10000000,
         help="total timesteps of the experiments")
