@@ -1,42 +1,9 @@
-"""
-bipedal_walker_multi.py
-
-Description:
-    - This script contains an multi-input PPO agent and associated functions to 
-      fuse images and telemetry with continuous action space. 
-
-Functions:
-    - Agent class: multi-input PPO agent designed to observe 600x400 images and 
-      24 values of telemetry data, producing continuous actions.
-    - layer_init(layer, std, bias_const): 
-        Initializes a neural network layer with orthogonal weights and a constant bias.
-    
-    - make_env(env_id, idx, capture_video, run_name, gamma, num_frames): 
-        Creates an environment instance with specific wrappers and configurations.
-    
-    - main(): 
-        The primary function to set up the environment, agent, and training loop.
-    
-
-Dependencies:
-- PyTorch
-- OpenAI gym[Box2D]
-- Pillow
-
-Author: Jack Vice
-Date Created: 07/20/23
-Last Modified: 08/21/23
-
--------------------------------------
-"""
+# docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppo_continuous_actionpy
 import argparse
 import os
 import random
 import time
 from distutils.util import strtobool
-
-from PIL import Image
-import torchvision.transforms as transforms
 
 
 import gym
@@ -53,7 +20,6 @@ from gym.error import DependencyNotInstalled
 from frame_pixels_stack import FrameStack
 import warnings
 warnings.filterwarnings("ignore")
-
 
 
 def parse_args():
@@ -87,7 +53,7 @@ def parse_args():
                         help="the learning rate of the optimizer")
     parser.add_argument("--num-envs", type=int, default=1,
                         help="the number of parallel game environments")
-    parser.add_argument("--num-steps", type=int, default=2048,
+    parser.add_argument("--num-steps", type=int, default=640,
                         help="the number of steps to run in each environment per policy rollout")
     parser.add_argument("--anneal-lr", type=lambda x: bool(strtobool(x)), default=True,
                         nargs="?", const=True,
@@ -137,102 +103,85 @@ from an environment and outputs an action choice and the associated value
 estimate.
 
 Notes:
-    - observation is shape 3x400x601 = 3x400x600 (image) + 400x3 (telemetry) 
     - Observations are normalized by 255.0 to bring the pixel values into the 
       [0, 1] range.
     - The reshaping and permute operations ensure the observations are 
       correctly aligned for the convolutional layers.
-    - Telemetry is decouple from image
 """
+
+
 class Agent(nn.Module): 
     def __init__(self, envs):
         super().__init__()
-        
-        
-        # Convolutional layers for RGB frames
-        self.conv = nn.Sequential(
-            layer_init(nn.Conv2d(3, 32, 8, stride=4)),  # Single RGB frame
+        self.network = nn.Sequential(
+            layer_init(nn.Conv2d(9, 32, 8, stride=4)),  # Adjusted for 9 channels (3 stacked RGB frames)
             nn.ReLU(),
             layer_init(nn.Conv2d(32, 64, 4, stride=2)),
             nn.ReLU(),
             layer_init(nn.Conv2d(64, 64, 3, stride=1)),
             nn.ReLU(),
-            nn.Flatten()
-        )
-        self.conv_out_dim = self._get_conv_out_dim((1, 3, 400, 600))
-        
-        self.telemetry_fc = nn.Sequential(
-            layer_init(nn.Linear(1200, 256)),  # Assuming input telemetry data has a flattened shape of 1200
-            nn.ReLU()
-        )
-
-        self.fc = nn.Sequential(
-            layer_init(nn.Linear(self.conv_out_dim + 256, 512)),
+            nn.Flatten(),
+            layer_init(nn.Linear(209024, 512)),  # The '?' may need adjustment. Check tensor shape after convolutions.
             nn.ReLU(),
         )
-        
-        
         self.actor_mean = layer_init(nn.Linear(512, envs.single_action_space.shape[0]), std=0.01)
-        self.actor_logstd = nn.Parameter(torch.zeros(1, envs.single_action_space.shape[0]))
+        self.actor_logstd = nn.Parameter(torch.zeros(1, envs.single_action_space.shape[0]))  # Learnable log std
         self.critic = layer_init(nn.Linear(512, 1), std=1)
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        #self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        #self.to(self.device)
+        #self.test_conv_output()
 
-    def _get_conv_out_dim(self, shape):
-        o = self.conv(torch.zeros(*shape))
-        #print(f"Conv out shape: {o.shape}")  # Add this debug print
-        return int(np.prod(o.size()))
-
-    def forward_network(self, x_rgb, x_telemetry):
-        #x_rgb = torch.ones(x_rgb.shape[0],3,400,600).to(self.device) / 10
-        x_rgb = x_rgb / 255.0
-        conv_out = self.conv(x_rgb)
-        #print("conv_out shape:", conv_out.shape)
-        # Pass telemetry data through its own layer
-        x_telemetry = self.telemetry_fc(x_telemetry)
-        #print("x_telemetry shape:", x_telemetry.shape)
-        combined = torch.cat([conv_out, x_telemetry], dim=1)
-        #print("combined shape:", combined.shape)
-        return self.fc(combined)
-    
     def get_value(self, x):
-        # Split x into x_rgb and x_telemetry
-        x_rgb = x[:, :, :, :600, :]
-        x_rgb = x_rgb.squeeze(1).permute(0, 3, 1, 2)  # Gives shape [1, 3, 400, 600]
-        
-        x_telemetry = x[:, :, 400:, :, :3]
-        x_telemetry = x_telemetry.squeeze(1).squeeze(-1).reshape(x_telemetry.size(0), -1)  # Shape [batch_size, 400*3]
-        #x_telemetry = x_telemetry.squeeze(1).squeeze(2).reshape(1, -1)  # Gives shape [1, 400*3]
-    
-        return self.critic(self.forward_network(x_rgb, x_telemetry))
+        x = x.permute(0, 1, 4, 2, 3).reshape(-1, 9, 400, 600)  # Adjusted for 9 channels
+        return self.critic(self.network(x / 255.0))
 
     def get_action_and_value(self, x, action=None):
-        x_rgb, x_telemetry = x[:, :, :, :-1, :], x[:, :, :, -1, :]  
-        x_rgb = x_rgb.squeeze(1)  # Shape [batch_size, 400, 601, 3]
-        x_rgb = x_rgb.permute(0, 3, 1, 2)  # Shape [batch_size, 3, 400, 601]
+        x = x.permute(0, 1, 4, 2, 3).reshape(-1, 9, 400, 600)  # Adjusted for 9 channels
+        hidden = self.network(x / 255.0)
         
-        # Extract the telemetry data for the fully connected layers
-        x_telemetry = x_telemetry.squeeze(1).squeeze(-1).reshape(x_telemetry.size(0), -1)  # Shape [batch_size, 400*3]
-    
-        hidden = self.forward_network(x_rgb, x_telemetry)
         action_mean = self.actor_mean(hidden)
         action_logstd = self.actor_logstd.expand_as(action_mean)
         action_std = torch.exp(action_logstd)
         probs = Normal(action_mean, action_std)
-
+        
         if action is None:
             action = probs.sample()
             
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(hidden)
 
 
+#    def test_conv_output(self):
+#        dummy_input = torch.randn(1, 9, 400, 600).to(self.device)  # Move tensor to the model's device
+#        output = self.network[:-2](dummy_input)  # Assuming -2 is the index before the linear layers
+#        print("output.shape", output.shape)
+
+
+
 
 def main():
-    num_frames = 1
+    num_frames = 3
     frame_height = 400
     frame_width = 600
     args = parse_args()
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
-    writer = writer_start(run_name, args)
+    if args.track:
+        import wandb
+
+        wandb.init(
+            project=args.wandb_project_name,
+            entity=args.wandb_entity,
+            sync_tensorboard=True,
+            config=vars(args),
+            name=run_name,
+            monitor_gym=True,
+            save_code=True,
+        )
+    writer = SummaryWriter(f"runs/{run_name}")
+    writer.add_text(
+        "hyperparameters",
+        "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|"
+                                                 for key, value in vars(args).items()])),
+    )
 
     # TRY NOT TO MODIFY: seeding
     random.seed(args.seed)
@@ -249,21 +198,18 @@ def main():
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
     ### debug
-    #next_obs, _ = envs.reset(seed=args.seed)
-    #print('next_obs.keys())', next_obs.keys())
-    #print('next_obs[pixels] shape:', next_obs['pixels'].shape)
-    #print('next_obs[state] shape:', next_obs['state'].shape)
+    next_obs, _ = envs.reset(seed=args.seed)
+    print('obs[0].keys())', next_obs.keys())
+    print('obs[pixels].shape', next_obs['pixels'].shape)
     #print("envs.single_observation_space.shape", envs.single_observation_space.shape)
-    #print('next_obs[pixels]', next_obs['pixels'])
-    #print('next_obs[state]', next_obs['state'])
+    
     #exit()
-
     agent = Agent(envs).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
     #obs = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(device)
-    obs = torch.zeros((args.num_steps, args.num_envs) + (num_frames , frame_height, frame_width+1, 3)).to(device)
+    obs = torch.zeros((args.num_steps, args.num_envs) + (num_frames , frame_height, frame_width, 3)).to(device)
     actions = torch.zeros((args.num_steps, args.num_envs) + envs.single_action_space.shape).to(device)
     logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
     rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
@@ -274,29 +220,10 @@ def main():
     global_step = 0
     start_time = time.time()
     next_obs, _ = envs.reset(seed=args.seed)
-
-    ######### NEW
-    # Ensure shape of the pixels tensor is [1, 1, 400, 600, 3]
-    pixels = torch.Tensor(next_obs['pixels']).to(device)  # Assuming its shape is [1, 400, 600, 3]
-    pixels = pixels.unsqueeze(1)  # Shape becomes [1, 1, 400, 600, 3]
-    
-    # Convert the state tensor to the desired shape
-    state = torch.Tensor(next_obs['state']).to(device)  # Shape [1, 24]
-    state_tensor = state.unsqueeze(1).expand(-1, 400, -1)  # Shape [1, 400, 24]
-
-    # Reshape state tensor and reduce its width to 1 while retaining the last dimension size 3
-    state_tensor_reshaped = state_tensor.reshape(1, 400, 8, 3).mean(dim=2, keepdim=True)  # Shape becomes [1, 400, 1, 3]
-    state_tensor_reshaped = state_tensor_reshaped.unsqueeze(1)  # Shape becomes [1, 1, 400, 1, 3]
-
-    # Concatenate
-    next_obs = torch.cat([pixels, state_tensor_reshaped], dim=3)  # Should now be of shape [1, 1, 400, 601, 3]
-    ########## end new
-    print("next_obs.shape:",next_obs.shape)    
-
+    next_obs = torch.Tensor(next_obs['pixels']).to(device)
     next_done = torch.zeros(args.num_envs).to(device)
     num_updates = args.total_timesteps // args.batch_size
 
-    
     for update in range(1, num_updates + 1):
         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
@@ -308,6 +235,7 @@ def main():
             global_step += 1 * args.num_envs
             obs[step] = next_obs
             dones[step] = next_done
+
             # ALGO LOGIC: action logic
             with torch.no_grad():
                 action, logprob, _, value = agent.get_action_and_value(next_obs)
@@ -319,22 +247,7 @@ def main():
             next_obs, reward, terminated, truncated, infos = envs.step(action.cpu().numpy())
             done = np.logical_or(terminated, truncated)
             rewards[step] = torch.tensor(reward).to(device).view(-1)
-            ######################### NEW
-            # Ensure shape of the pixels tensor is [1, 1, 400, 600, 3]
-            pixels = torch.Tensor(next_obs['pixels']).to(device)  # Assuming its shape is [1, 400, 600, 3]
-            pixels = pixels.unsqueeze(1)  # Shape becomes [1, 1, 400, 600, 3]
-            # Convert the state tensor to the desired shape
-            state = torch.Tensor(next_obs['state']).to(device)  # Shape [1, 24]
-            state_tensor = state.unsqueeze(1).expand(-1, 400, -1)  # Shape [1, 400, 24]
-            #print("state_tensor.shape: ", state_tensor.shape)
-            # Reshape state tensor and reduce its width to 1 while retaining the last dimension size 3
-            state_tensor_reshaped = state_tensor.reshape(1, 400, 8, 3).mean(dim=2, keepdim=True)  # Shape becomes [1, 400, 1, 3]
-            state_tensor_reshaped = state_tensor_reshaped.unsqueeze(1)  # Shape becomes [1, 1, 400, 1, 3]
-            # Concatenate
-            next_obs = torch.cat([pixels, state_tensor_reshaped], dim=3)  # Should now be of shape [1, 1, 400, 601, 3]
-            ####################### end new
-            
-            next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(done).to(device)
+            next_obs, next_done = torch.Tensor(next_obs['pixels']).to(device), torch.Tensor(done).to(device)
 
             # Only print when at least 1 env is done
             if "final_info" not in infos:
@@ -344,7 +257,7 @@ def main():
                 # Skip the envs that are not done
                 if info is None:
                     continue
-                print(f"image zeroed: global_step={global_step}, episodic_return={info['episode']['r']}")
+                print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
                 writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
                 writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
 
@@ -365,7 +278,7 @@ def main():
             returns = advantages + values
 
         # flatten the batch
-        b_obs = obs.reshape((-1,) + (num_frames , frame_height, frame_width+1, 3)) 
+        b_obs = obs.reshape((-1,) + (num_frames , frame_height, frame_width, 3)) # envs.single_observation_space.shape)
         b_logprobs = logprobs.reshape(-1)
         b_actions = actions.reshape((-1,) + envs.single_action_space.shape)
         b_advantages = advantages.reshape(-1)
@@ -381,8 +294,7 @@ def main():
                 end = start + args.minibatch_size
                 mb_inds = b_inds[start:end]
 
-                _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds],
-                                                                              b_actions[mb_inds])
+                _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds], b_actions[mb_inds])
                 logratio = newlogprob - b_logprobs[mb_inds]
                 ratio = logratio.exp()
 
@@ -394,13 +306,11 @@ def main():
 
                 mb_advantages = b_advantages[mb_inds]
                 if args.norm_adv:
-                    mb_advantages = (mb_advantages - mb_advantages.mean()) /  \
-                        (mb_advantages.std() + 1e-8)
+                    mb_advantages = (mb_advantages - mb_advantages.mean()) / (mb_advantages.std() + 1e-8)
 
                 # Policy loss
                 pg_loss1 = -mb_advantages * ratio
-                pg_loss2 = -mb_advantages * torch.clamp(ratio, 1 - args.clip_coef,
-                                                        1 + args.clip_coef)
+                pg_loss2 = -mb_advantages * torch.clamp(ratio, 1 - args.clip_coef, 1 + args.clip_coef)
                 pg_loss = torch.max(pg_loss1, pg_loss2).mean()
 
                 # Value loss
@@ -434,47 +344,28 @@ def main():
         var_y = np.var(y_true)
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
 
-        write_stats_to_file(optimizer, v_loss, pg_loss, entropy_loss, old_approx_kl,
-                            clipfracs, approx_kl, explained_var, global_step,
-                            start_time, writer)
+        # TRY NOT TO MODIFY: record rewards for plotting purposes
+        writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
+        writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
+        writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
+        writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
+        writer.add_scalar("losses/old_approx_kl", old_approx_kl.item(), global_step)
+        writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
+        writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
+        writer.add_scalar("losses/explained_variance", explained_var, global_step)
+        print("SPS:", int(global_step / (time.time() - start_time)))
+        writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+
     envs.close()
-
-def writer_start(run_name, args):    
-    writer =  SummaryWriter(f"runs/{run_name}")
-    writer.add_text(
-        "hyperparameters",
-        "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|"
-                                                 for key, value in vars(args).items()])),
-    )
-    return writer
-
-    
-def write_stats_to_file(optimizer, v_loss, pg_loss, entropy_loss, old_approx_kl,
-                            clipfracs, approx_kl, explained_var, global_step,
-                            start_time, writer):
-    # TRY NOT TO MODIFY: record rewards for plotting purposes
-    writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
-    writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
-    writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
-    writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
-    writer.add_scalar("losses/old_approx_kl", old_approx_kl.item(), global_step)
-    writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
-    writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
-    writer.add_scalar("losses/explained_variance", explained_var, global_step)
-    print("SPS:", int(global_step / (time.time() - start_time)))
-    writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
-
     writer.close()
 
-
-    
 def make_env(env_id, idx, capture_video, run_name, gamma, num_frames):
     def thunk():
         if True: #capture_video:
             env = gym.make(env_id, render_mode="rgb_array")
         else:
             env = gym.make(env_id)
-        env =  PixelObservationWrapper(env, pixels_only=False)
+        env =  PixelObservationWrapper(env)
         #env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
         env = gym.wrappers.RecordEpisodeStatistics(env)
         if capture_video:
@@ -485,7 +376,7 @@ def make_env(env_id, idx, capture_video, run_name, gamma, num_frames):
         #env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
         env = gym.wrappers.NormalizeReward(env, gamma=gamma)
         env = gym.wrappers.TransformReward(env, lambda reward: np.clip(reward, -10, 10))
-        #env = FrameStack(env, num_frames)
+        env = FrameStack(env, num_frames)
         return env
 
     return thunk

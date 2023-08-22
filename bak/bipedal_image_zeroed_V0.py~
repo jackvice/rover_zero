@@ -144,11 +144,11 @@ Notes:
       correctly aligned for the convolutional layers.
     - Telemetry is decouple from image
 """
+"""
 class Agent(nn.Module): 
     def __init__(self, envs):
         super().__init__()
-        
-        
+
         # Convolutional layers for RGB frames
         self.conv = nn.Sequential(
             layer_init(nn.Conv2d(3, 32, 8, stride=4)),  # Single RGB frame
@@ -159,19 +159,85 @@ class Agent(nn.Module):
             nn.ReLU(),
             nn.Flatten()
         )
-        self.conv_out_dim = self._get_conv_out_dim((1, 3, 400, 600))
-        
+
+
         self.telemetry_fc = nn.Sequential(
             layer_init(nn.Linear(1200, 256)),  # Assuming input telemetry data has a flattened shape of 1200
             nn.ReLU()
         )
 
+        # Fully connected layers
         self.fc = nn.Sequential(
-            layer_init(nn.Linear(self.conv_out_dim + 256, 512)),
+            layer_init(nn.Linear(210224 + 256, 512)),  # Adding 256 to the concatenated dimension to account for the new layer's output
             nn.ReLU(),
         )
+
         
+        # determine the exact output shape using a dummy input
+        #conv_out_dim = self._get_conv_out_dim((1, 3, 400, 600))
+
+        # Fully connected layers
+        self.fc = nn.Sequential(
+            layer_init(nn.Linear(210224, 512)),# conv_out_dim + 24, 512)), 
+            nn.ReLU(),
+        )
+
+        self.actor_mean = layer_init(nn.Linear(512, envs.single_action_space.shape[0]), std=0.01)
+        self.actor_logstd = nn.Parameter(torch.zeros(1, envs.single_action_space.shape[0]))
+        self.critic = layer_init(nn.Linear(512, 1), std=1)
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
+    def _get_conv_out_dim(self, shape):
+        o = self.conv(torch.zeros(*shape))
+        return int(np.prod(o.size()))
+
+    def forward_network(self, x_rgb, x_telemetry):
+        # Convert the tensor to an image
+        #x_rgb_image = x_rgb.squeeze(0).permute(1, 2, 0).clamp(0, 255).to(torch.uint8)  # Change shape to [400, 600, 3]
+        #print(f"Shape of x_rgb_image: {x_rgb_image.shape}")  # Keep this for now
+        #pil_img = Image.fromarray(x_rgb_image.cpu().numpy())
+        # Save the image
+        #pil_img.save('x_rgb_image.png')
+        #print (x_rgb.shape)
+        #exit()
+        
+        #x_rgb = torch.ones(x_rgb.shape[0],3,400,600).to(self.device) / 10# x_rgb / 255.0
+        
+        #print (x_rgb.shape[0])
+        #exit()
+        x_rgb = x_rgb / 255.0
+        conv_out = self.conv(x_rgb)
+        x_telemetry = self.telemetry_fc(x_telemetry)
+        
+        combined = torch.cat([conv_out, x_telemetry], dim=1)
+        return self.fc(combined)
+"""
+class Agent(nn.Module): 
+    def __init__(self, envs):
+        super().__init__()
+
+        # Convolutional layers for RGB frames
+        self.conv = nn.Sequential(
+            layer_init(nn.Conv2d(3, 32, 8, stride=4)),  # Single RGB frame
+            nn.ReLU(),
+            layer_init(nn.Conv2d(32, 64, 4, stride=2)),
+            nn.ReLU(),
+            layer_init(nn.Conv2d(64, 64, 3, stride=1)),
+            nn.ReLU(),
+            nn.Flatten()
+        )
+
+        self.telemetry_fc = nn.Sequential(
+            layer_init(nn.Linear(1200, 256)),  # Assuming input telemetry data has a flattened shape of 1200
+            nn.ReLU()
+        )
+
+        # Fully connected layers
+        self.fc = nn.Sequential(
+            layer_init(nn.Linear(210224 + 256, 512)),  # Adding 256 to the concatenated dimension to account for the new layer's output
+            nn.ReLU(),
+        )
+
         self.actor_mean = layer_init(nn.Linear(512, envs.single_action_space.shape[0]), std=0.01)
         self.actor_logstd = nn.Parameter(torch.zeros(1, envs.single_action_space.shape[0]))
         self.critic = layer_init(nn.Linear(512, 1), std=1)
@@ -179,32 +245,31 @@ class Agent(nn.Module):
 
     def _get_conv_out_dim(self, shape):
         o = self.conv(torch.zeros(*shape))
-        #print(f"Conv out shape: {o.shape}")  # Add this debug print
         return int(np.prod(o.size()))
 
     def forward_network(self, x_rgb, x_telemetry):
-        #x_rgb = torch.ones(x_rgb.shape[0],3,400,600).to(self.device) / 10
         x_rgb = x_rgb / 255.0
         conv_out = self.conv(x_rgb)
-        #print("conv_out shape:", conv_out.shape)
+        
         # Pass telemetry data through its own layer
         x_telemetry = self.telemetry_fc(x_telemetry)
-        #print("x_telemetry shape:", x_telemetry.shape)
+        
         combined = torch.cat([conv_out, x_telemetry], dim=1)
-        #print("combined shape:", combined.shape)
         return self.fc(combined)
     
+    # ... Rest of the code remains unchanged ...
+
     def get_value(self, x):
         # Split x into x_rgb and x_telemetry
         x_rgb = x[:, :, :, :600, :]
         x_rgb = x_rgb.squeeze(1).permute(0, 3, 1, 2)  # Gives shape [1, 3, 400, 600]
         
-        x_telemetry = x[:, :, 400:, :, :3]
-        x_telemetry = x_telemetry.squeeze(1).squeeze(-1).reshape(x_telemetry.size(0), -1)  # Shape [batch_size, 400*3]
-        #x_telemetry = x_telemetry.squeeze(1).squeeze(2).reshape(1, -1)  # Gives shape [1, 400*3]
+        x_telemetry = x[:, :, :, 600:, :3]
+        x_telemetry = x_telemetry.squeeze(1).squeeze(2).reshape(1, -1)  # Gives shape [1, 400*3]
     
         return self.critic(self.forward_network(x_rgb, x_telemetry))
 
+    
     def get_action_and_value(self, x, action=None):
         x_rgb, x_telemetry = x[:, :, :, :-1, :], x[:, :, :, -1, :]  
         x_rgb = x_rgb.squeeze(1)  # Shape [batch_size, 400, 601, 3]
@@ -326,7 +391,7 @@ def main():
             # Convert the state tensor to the desired shape
             state = torch.Tensor(next_obs['state']).to(device)  # Shape [1, 24]
             state_tensor = state.unsqueeze(1).expand(-1, 400, -1)  # Shape [1, 400, 24]
-            #print("state_tensor.shape: ", state_tensor.shape)
+            print("state_tensor.shape: ", state_tensor.shape)
             # Reshape state tensor and reduce its width to 1 while retaining the last dimension size 3
             state_tensor_reshaped = state_tensor.reshape(1, 400, 8, 3).mean(dim=2, keepdim=True)  # Shape becomes [1, 400, 1, 3]
             state_tensor_reshaped = state_tensor_reshaped.unsqueeze(1)  # Shape becomes [1, 1, 400, 1, 3]
