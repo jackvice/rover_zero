@@ -275,23 +275,63 @@ def main():
     start_time = time.time()
     next_obs, _ = envs.reset(seed=args.seed)
 
-    ######### NEW
+    """
+    ########## New2
+    print('next_obs[state]:', next_obs['state'])
     # Ensure shape of the pixels tensor is [1, 1, 400, 600, 3]
     pixels = torch.Tensor(next_obs['pixels']).to(device)  # Assuming its shape is [1, 400, 600, 3]
     pixels = pixels.unsqueeze(1)  # Shape becomes [1, 1, 400, 600, 3]
+    print('pixels.shape:', pixels.shape)
     
     # Convert the state tensor to the desired shape
     state = torch.Tensor(next_obs['state']).to(device)  # Shape [1, 24]
+    print("state:", state)
+    print("state.shape:", state.shape)
+    
+    # Repeat state tensor to the desired shape
+    repeated_state = state.unsqueeze(2).expand(-1, -1, 400).unsqueeze(3).expand(-1, -1, -1, 1).unsqueeze(4).expand(-1, -1, -1, -1, 3)
+    
+    # Truncate or pad the tensor as necessary
+    if repeated_state.shape[3] > 1:
+        repeated_state = repeated_state[:, :, :, :1, :]
+    print('repeated_state.shape:', repeated_state.shape)
+    
+    # Concatenate along the width dimension
+    next_obs = torch.cat([pixels, repeated_state], dim=3)  # Expected shape [1, 1, 400, 601, 3]
+    print("next_obs[:,:,:,600:,:]", next_obs[:,:,:,600:,:])
+    print("next_obs.shape:", next_obs.shape)
+    exit()
+    ########## end New2 
+    """
+    
+    ########## New    
+    #print('next_obs[pixels]:', next_obs['pixels'] )
+    #print('next_obs[state]:', next_obs['state'])
+    # Ensure shape of the pixels tensor is [1, 1, 400, 600, 3]
+    pixels = torch.Tensor(next_obs['pixels']).to(device)  # Assuming its shape is [1, 400, 600, 3]
+    pixels = pixels.unsqueeze(1)  # Shape becomes [1, 1, 400, 600, 3]
+    #print('pixels:', pixels)
+    print('pixels.shape:',pixels.shape)
+    # Convert the state tensor to the desired shape
+    state = torch.Tensor(next_obs['state']).to(device)  # Shape [1, 24]
+    #print("state:", state)
+    print("state.shape:",state.shape)
     state_tensor = state.unsqueeze(1).expand(-1, 400, -1)  # Shape [1, 400, 24]
-
+    print("state_tensor.shape:",state_tensor.shape)
+    #exit()
     # Reshape state tensor and reduce its width to 1 while retaining the last dimension size 3
-    state_tensor_reshaped = state_tensor.reshape(1, 400, 8, 3).mean(dim=2, keepdim=True)  # Shape becomes [1, 400, 1, 3]
+    #state_tensor_reshaped = state_tensor.reshape(1, 400, 8, 3).mean(dim=2, keepdim=True)  # Shape becomes [1, 400, 1, 3]
+    state_tensor_reshaped = state_tensor.reshape(1, 400, 8, 3)  # Shape be
     state_tensor_reshaped = state_tensor_reshaped.unsqueeze(1)  # Shape becomes [1, 1, 400, 1, 3]
-
+    print("state_tensor_reshaped.shape:",state_tensor_reshaped.shape)
     # Concatenate
     next_obs = torch.cat([pixels, state_tensor_reshaped], dim=3)  # Should now be of shape [1, 1, 400, 601, 3]
+    #print("next_obs[:,:,:,600,:]", next_obs[:,:,:,600,:])
+    print("next_obs.shape:",next_obs.shape)
+    exit()
+
     ########## end new
-    print("next_obs.shape:",next_obs.shape)    
+    
 
     next_done = torch.zeros(args.num_envs).to(device)
     num_updates = args.total_timesteps // args.batch_size
@@ -328,7 +368,8 @@ def main():
             state_tensor = state.unsqueeze(1).expand(-1, 400, -1)  # Shape [1, 400, 24]
             #print("state_tensor.shape: ", state_tensor.shape)
             # Reshape state tensor and reduce its width to 1 while retaining the last dimension size 3
-            state_tensor_reshaped = state_tensor.reshape(1, 400, 8, 3).mean(dim=2, keepdim=True)  # Shape becomes [1, 400, 1, 3]
+            state_tensor_reshaped = state_tensor.reshape(1, 400, 8, 3).mean(dim=2, keepdim=True)  # becomes [1, 400, 1, 3]
+            state_tensor_reshaped = state_tensor.reshape(1, 400, 8, 3).mean(dim=2, keepdim=True)  # becomes [1, 400, 1, 3]
             state_tensor_reshaped = state_tensor_reshaped.unsqueeze(1)  # Shape becomes [1, 1, 400, 1, 3]
             # Concatenate
             next_obs = torch.cat([pixels, state_tensor_reshaped], dim=3)  # Should now be of shape [1, 1, 400, 601, 3]
