@@ -139,6 +139,7 @@ class RoverZeroEnv(gym.Env):
         """
         # # # # Take an observation
         rclpy.spin_once(self.node)
+        
         #obs_message = self.observation_pose_msg
         # Check that the observation is not prior to the action
         # obs_message = self._observation_msg
@@ -167,7 +168,7 @@ class RoverZeroEnv(gym.Env):
         return [seed]
 
     def step(self, action):
-
+        print('in_step')
         self.num_timesteps += 1
 
         #self.set_ang_vel(action)

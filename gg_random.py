@@ -13,9 +13,11 @@ env = gym.make('RoverZero-v0')
 #env = gym.make('MARACollisionOrientRandomTarget-v0')
 
 observation, _ = env.reset()
+print("########## observation ONE: #########", observation)
 
 while True:
+    print('in while')
     # take a random action
     #observation, reward, done, info = env.step(env.action_space.sample())
-	observation, reward, done, _, info = env.step(np.array([-0.01,0.0]))
-	print("observation", observation)
+    observation, reward, done, _, info = env.step(np.array([-0.1,0.0]))
+    print("observation", observation)
