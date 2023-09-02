@@ -1,0 +1,14 @@
+<?xml version="1.0" ?>
+<sdf version="1.7">
+  <world name="default">
+    <!-- Include ground plane -->
+    <include>
+      <uri>ignition://gazebo/worlds/empty</uri>
+    </include>
+
+    <!-- Include your robot model -->
+    <include>
+      <uri>file:/home/jack/src/rover_zero/gazebo/sdf/rover_4wd.sdf</uri>
+    </include>
+  </world>
+</sdf>

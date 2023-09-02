@@ -18,7 +18,7 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>file://$(find roverrobotics_description)/meshes/flipper_track.dae</uri>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/flipper_track.dae</uri>
           </mesh>
         </geometry>
       </collision>
@@ -27,7 +27,7 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>file://$(find roverrobotics_description)/meshes/flipper_track.dae</uri>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/flipper_track.dae</uri>
           </mesh>
         </geometry>
       </collision>
@@ -36,7 +36,7 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>file://$(find roverrobotics_description)/meshes/flipper_chassis.dae</uri>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/flipper_chassis.dae</uri>
           </mesh>
         </geometry>
       </collision>
@@ -45,7 +45,7 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>file://$(find roverrobotics_description)/meshes/flipper_chassis.dae</uri>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/flipper_chassis.dae</uri>
           </mesh>
         </geometry>
       </visual>
@@ -54,7 +54,7 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>file://$(find roverrobotics_description)/meshes/flipper_track.dae</uri>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/flipper_track.dae</uri>
           </mesh>
         </geometry>
       </visual>
@@ -63,7 +63,7 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>file://$(find roverrobotics_description)/meshes/flipper_track.dae</uri>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/flipper_track.dae</uri>
           </mesh>
         </geometry>
       </visual>
@@ -103,7 +103,7 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>file://$(find roverrobotics_description)/meshes/pro_tire.dae</uri>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/pro_tire.dae</uri>
           </mesh>
         </geometry>
       </collision>
@@ -112,7 +112,7 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>file://$(find roverrobotics_description)/meshes/pro_tire.dae</uri>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/pro_tire.dae</uri>
           </mesh>
         </geometry>
       </visual>
@@ -152,7 +152,7 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>file://$(find roverrobotics_description)/meshes/pro_tire.dae</uri>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/pro_tire.dae</uri>
           </mesh>
         </geometry>
       </collision>
@@ -161,7 +161,7 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>file://$(find roverrobotics_description)/meshes/pro_tire.dae</uri>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/pro_tire.dae</uri>
           </mesh>
         </geometry>
       </visual>
@@ -201,7 +201,7 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>file://$(find roverrobotics_description)/meshes/pro_tire.dae</uri>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/pro_tire.dae</uri>
           </mesh>
         </geometry>
       </collision>
@@ -210,7 +210,7 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>file://$(find roverrobotics_description)/meshes/pro_tire.dae</uri>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/pro_tire.dae</uri>
           </mesh>
         </geometry>
       </visual>
@@ -250,7 +250,7 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>file://$(find roverrobotics_description)/meshes/pro_tire.dae</uri>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/pro_tire.dae</uri>
           </mesh>
         </geometry>
       </collision>
@@ -259,7 +259,7 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>file://$(find roverrobotics_description)/meshes/pro_tire.dae</uri>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/pro_tire.dae</uri>
           </mesh>
         </geometry>
       </visual>
