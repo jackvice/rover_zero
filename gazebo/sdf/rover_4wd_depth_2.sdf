@@ -1,0 +1,366 @@
+<sdf version='1.7'>
+  <model name='rover_4wd'>
+    <link name='base_link'>
+      <inertial>
+        <pose>0 0 0.125 0 -0 0</pose>
+        <mass>4.53592</mass>
+        <inertia>
+          <ixx>0.028064</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.08226</iyy>
+          <iyz>0</iyz>
+          <izz>0.10258</izz>
+        </inertia>
+      </inertial>
+      <collision name='base_link_fixed_joint_lump__chassis_link_collision'>
+        <pose>0 0.11 0.125 -1.57159 9.3e-05 -3.14159</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/flipper_track.dae</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <collision name='base_link_fixed_joint_lump__chassis_link_collision_1'>
+        <pose>0 0.11 0.125 -1.57159 9.3e-05 -3.14159</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/flipper_track.dae</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <collision name='base_link_fixed_joint_lump__chassis_link_collision_2'>
+        <pose>0 0 0.125 1.57 -0 1.57</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/flipper_chassis.dae</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <visual name='base_link_fixed_joint_lump__chassis_link_visual'>
+        <pose>0 0 0.125 1.57 -0 1.57</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/flipper_chassis.dae</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <visual name='base_link_fixed_joint_lump__chassis_link_visual_1'>
+        <pose>0 0.11 0.125 -1.57159 9.3e-05 -3.14159</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/flipper_track.dae</uri>
+          </mesh>
+        </geometry>
+      </visual>
+      <visual name='base_link_fixed_joint_lump__chassis_link_visual_2'>
+        <pose>0 0.11 0.125 -1.57159 9.3e-05 -3.14159</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/flipper_track.dae</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='fl_wheel_to_chassis' type='revolute'>
+      <pose relative_to='base_link'>0.1415 0.18 0.125 0 -0 0</pose>
+      <parent>base_link</parent>
+      <child>fl_wheel_link</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+        <dynamics>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='fl_wheel_link'>
+      <pose relative_to='fl_wheel_to_chassis'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 -0 0</pose>
+        <mass>1.25</mass>
+        <inertia>
+          <ixx>0.005645</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.01008</iyy>
+          <iyz>0</iyz>
+          <izz>0.005645</izz>
+        </inertia>
+      </inertial>
+      <collision name='fl_wheel_link_collision'>
+        <pose>0 0 0 1.57 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/pro_tire.dae</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <visual name='fl_wheel_link_visual'>
+        <pose>0 0 0 1.57 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/pro_tire.dae</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='fr_wheel_to_chassis' type='revolute'>
+      <pose relative_to='base_link'>0.1415 -0.18 0.125 0 -0 0</pose>
+      <parent>base_link</parent>
+      <child>fr_wheel_link</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+        <dynamics>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='fr_wheel_link'>
+      <pose relative_to='fr_wheel_to_chassis'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 -0 0</pose>
+        <mass>1.25</mass>
+        <inertia>
+          <ixx>0.005645</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.01008</iyy>
+          <iyz>0</iyz>
+          <izz>0.005645</izz>
+        </inertia>
+      </inertial>
+      <collision name='fr_wheel_link_collision'>
+        <pose>0 0 0 -1.57 0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/pro_tire.dae</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <visual name='fr_wheel_link_visual'>
+        <pose>0 0 0 -1.57 0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/pro_tire.dae</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='rl_wheel_to_chassis' type='revolute'>
+      <pose relative_to='base_link'>-0.145 0.18 0.125 0 -0 0</pose>
+      <parent>base_link</parent>
+      <child>rl_wheel_link</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+        <dynamics>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='rl_wheel_link'>
+      <pose relative_to='rl_wheel_to_chassis'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 -0 0</pose>
+        <mass>1.25</mass>
+        <inertia>
+          <ixx>0.005645</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.01008</iyy>
+          <iyz>0</iyz>
+          <izz>0.005645</izz>
+        </inertia>
+      </inertial>
+      <collision name='rl_wheel_link_collision'>
+        <pose>0 0 0 -1.57 -0 3.1415</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/pro_tire.dae</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <visual name='rl_wheel_link_visual'>
+        <pose>0 0 0 -1.57 -0 3.1415</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/pro_tire.dae</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='rr_wheel_to_chassis' type='revolute'>
+      <pose relative_to='base_link'>-0.145 -0.18 0.125 0 -0 0</pose>
+      <parent>base_link</parent>
+      <child>rr_wheel_link</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+        <dynamics>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='rr_wheel_link'>
+      <pose relative_to='rr_wheel_to_chassis'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 -0 0</pose>
+        <mass>1.25</mass>
+        <inertia>
+          <ixx>0.005645</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.01008</iyy>
+          <iyz>0</iyz>
+          <izz>0.005645</izz>
+        </inertia>
+      </inertial>
+      <collision name='rr_wheel_link_collision'>
+        <pose>0 0 0 1.57 0 3.1415</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/pro_tire.dae</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <visual name='rr_wheel_link_visual'>
+        <pose>0 0 0 1.57 0 3.1415</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>file:///home/jack/rover_workspace/src/roverrobotics_ros2/roverrobotics_description/meshes/pro_tire.dae</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <!-- *********************** DEPTH CAMERA ******************************  -->
+    <!-- The depth camera (e.g. Intel Realsense camera). -->
+    <link name="camera_depth_frame">
+      <pose>0.12 0 0.65 -1.5708 0 -1.5708</pose>
+    </link>
+ 
+    <link name="camera_link">
+      <pose>0.12 0 0.65 0 0 0</pose>
+   
+      <visual name="camera_visual">
+        <pose>-0.005 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.015 0.08 0.022</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0 0 0 1.0</ambient>
+          <diffuse>0 0 0 1.0</diffuse>
+          <specular>0.0 0.0 0.0 1.0</specular>
+          <emissive>0.0 0.0 0.0 1.0</emissive>
+        </material>
+      </visual>
+      <sensor name="front_lidar" type="gpu_lidar">
+				<pose>0.278738 3e-06 0.044475 0 -0 0</pose>
+				<topic>/model/igt_one/laserscan</topic>
+				<visualize>0</visualize>
+				<update_rate>10</update_rate>
+				<always_on>1</always_on>
+				<ray>
+					<scan>
+						<horizontal>
+							<samples>720</samples>
+							<resolution>1</resolution>
+							<min_angle>-1.8326</min_angle>
+							<max_angle>1.8326</max_angle>
+						</horizontal>
+					</scan>
+					<range>
+						<min>0.05</min>
+						<max>20</max>
+						<resolution>0.01</resolution>
+					</range>
+					<noise>
+						<type>gaussian</type>
+						<mean>0</mean>
+						<stddev>0.01</stddev>
+					</noise>
+				</ray>
+	  </sensor>
+      <sensor name="d435_color" type="camera">
+				<always_on>1</always_on>
+				<update_rate>30</update_rate>
+				<visualize>1</visualize>
+				<pose>0 0.0175 0.3125 0 -0 0</pose>
+				<topic>/model/igt_one/color_camera</topic>
+				<camera name="d435">
+					<horizontal_fov>1.21126</horizontal_fov>
+					<image>
+						<width>640</width>
+						<height>480</height>
+						<format>RGB_INT8</format>
+					</image>
+					<clip>
+						<near>0.1</near>
+						<far>100</far>
+					</clip>
+					<noise>
+						<type>gaussian</type>
+						<mean>0</mean>
+						<stddev>0.007</stddev>
+					</noise>
+				</camera>
+      </sensor>
+ 
+    </link>
+    <static>0</static>
+    <plugin name='ignition::gazebo::systems::DiffDrive' filename='ignition-gazebo-diff-drive-system'>
+      <num_wheel_pairs>2</num_wheel_pairs>
+      <left_joint>rl_wheel_to_chassis</left_joint>
+      <left_joint>fl_wheel_to_chassis</left_joint>
+      <right_joint>rr_wheel_to_chassis</right_joint>
+      <right_joint>fr_wheel_to_chassis</right_joint>
+      <wheel_separation>0.24</wheel_separation>
+      <wheel_radius>0.122</wheel_radius>
+      <max_linear_acceleration>5</max_linear_acceleration>
+      <min_linear_acceleration>-5</min_linear_acceleration>
+      <max_angular_acceleration>4</max_angular_acceleration>
+      <min_angular_acceleration>-4</min_angular_acceleration>
+      <frame_id>odom</frame_id>
+      <child_frame_id>base_link</child_frame_id>
+      <topic>/cmd_vel</topic>
+      <odom_topic>/odometry/wheels</odom_topic>
+      <tf_topic>/tf_gazebo</tf_topic>
+    </plugin>
+    <plugin name='ignition::gazebo::systems::JointStatePublisher' filename='ignition-gazebo-joint-state-publisher-system'>
+      <topic>/joint_states</topic>
+    </plugin>
+  </model>
+</sdf>

@@ -1,0 +1,21 @@
+<?xml version="1.0" ?>
+<sdf version="1.7">
+  <world name="test_world">
+
+    <!-- Define the physics engine -->
+    <physics type="ode">
+      <real_time_update_rate>1000.0</real_time_update_rate>
+    </physics>
+
+    <!-- Add a Sun -->
+    <light type="directional" name="sun">
+      <pose>0 0 10 0 0 0</pose>
+    </light>
+
+
+    <!-- Include your robot model -->
+    <include>
+      <uri>file://home/jack/src/rover_zero/gazebo/sdf/rover_4wd.sdf</uri>
+    </include>
+  </world>
+</sdf>
