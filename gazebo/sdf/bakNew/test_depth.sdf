@@ -15,7 +15,8 @@
 
     <!-- Include your robot model -->
     <include>
-      <uri>file://home/jack/src/rover_zero/gazebo/sdf/rover_4wd.sdf</uri>
+      <uri>file://home/jack/src/rover_zero/gazebo/sdf/bakNew/rover_4wd_depth_2.sdf</uri>
+
     </include>
   </world>
 </sdf>
