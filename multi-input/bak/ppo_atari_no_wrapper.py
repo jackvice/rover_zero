@@ -5,7 +5,8 @@ import random
 import time
 from distutils.util import strtobool
 
-import gymnasium as gym
+#import gymnasium as gym
+import gym
 import numpy as np
 import torch
 import torch.nn as nn
@@ -13,13 +14,24 @@ import torch.optim as optim
 from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 
-from stable_baselines3.common.atari_wrappers import (  # isort:skip
-    ClipRewardEnv,
-    EpisodicLifeEnv,
-    FireResetEnv,
-    MaxAndSkipEnv,
-    NoopResetEnv,
-)
+from collections import deque
+import warnings
+
+warnings.filterwarnings("ignore")
+
+#from stable_baselines3.common.atari_wrappers import (  # isort:skip
+#    ClipRewardEnv,
+#    EpisodicLifeEnv,
+#    FireResetEnv,
+#    MaxAndSkipEnv,
+#    NoopResetEnv,
+#)
+
+"""
+1. do my own frame stacking and check working
+2. unvectorize environment
+3. 
+"""
 
 
 def parse_args():
@@ -29,8 +41,9 @@ def parse_args():
         help="the name of this experiment")
     parser.add_argument("--seed", type=int, default=1,
         help="seed of the experiment")
-    parser.add_argument("--torch-deterministic", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-        help="if toggled, `torch.backends.cudnn.deterministic=False`")
+    parser.add_argument("--torch-deterministic", type=lambda x: bool(strtobool(x)),
+                        default=True, nargs="?",const=True,
+                        help="if toggled, `torch.backends.cudnn.deterministic=False`")
     parser.add_argument("--cuda", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
         help="if toggled, cuda will be enabled by default")
     parser.add_argument("--track", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
@@ -94,12 +107,12 @@ def make_env(env_id, seed, idx, capture_video, run_name):
         if capture_video:
             if idx == 0:
                 env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
-        env = NoopResetEnv(env, noop_max=30)
+        #env = NoopResetEnv(env, noop_max=30)
         #env = MaxAndSkipEnv(env, skip=4)
-        env = EpisodicLifeEnv(env)
-        if "FIRE" in env.unwrapped.get_action_meanings():
-            env = FireResetEnv(env)
-        env = ClipRewardEnv(env)
+        #env = EpisodicLifeEnv(env)
+        #if "FIRE" in env.unwrapped.get_action_meanings():
+        #    env = FireResetEnv(env)
+        #env = ClipRewardEnv(env)
         env = gym.wrappers.ResizeObservation(env, (84, 84))
         env = gym.wrappers.GrayScaleObservation(env)
         #env = gym.wrappers.FrameStack(env, 4)
@@ -145,7 +158,264 @@ class Agent(nn.Module):
             action = probs.sample()
         return action, probs.log_prob(action), probs.entropy(), self.critic(hidden)
 
+"""
+def preprocess_frame(frame):
+    # If necessary, you can perform preprocessing steps here, like resizing, normalization, etc.
+    return frame
 
+def frame_stacker_start(frame_queue):
+    # Ensure the deque contains 4 frames
+    while len(frame_queue) < 4:
+        combined_tensor = np.concatenate((frame_queue[-1], np.zeros((1, 1, 84, 84))), axis=1)
+        frame_queue.append(combined_tensor)
+    return frame_queue
+
+    #stacked_frames = np.concatenate(list(frame_queue), axis=2)
+    #return stacked_frames
+
+# Note: The shape of stacked_frames will be (210, 160, 12) when 4 frames are stacked
+"""
+
+def initialize_stack(maxlen=4):
+    return deque(maxlen=maxlen)
+
+def append_to_stack(stack, array):
+    stack.append(array)
+    return stack
+
+def get_reset_stack(stack, next_obs, num_frames, x, y):
+    # If the stack isn't full yet, this will pad it with zeros
+    while len(stack) < num_frames:
+        #stack.appendleft(torch.zeros((1, 1, 84, 84)))
+        stack.appendleft(torch.reshape(next_obs, (1, 1, x, y)))
+    return torch.concatenate(tuple(stack), axis=1)
+
+def get_current_stack(stack):
+    return torch.cat(tuple(stack), dim=1)
+
+if __name__ == "__main__":
+    args = parse_args()
+    run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+    x = 84
+    y = 84
+    num_frames = 4
+    if args.track:
+        import wandb
+
+        wandb.init(
+            project=args.wandb_project_name,
+            entity=args.wandb_entity,
+            sync_tensorboard=True,
+            config=vars(args),
+            name=run_name,
+            monitor_gym=True,
+            save_code=True,
+        )
+    writer = SummaryWriter(f"runs/{run_name}")
+    writer.add_text(
+        "hyperparameters",
+        "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
+    )
+
+    
+    
+    # TRY NOT TO MODIFY: seeding
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.backends.cudnn.deterministic = args.torch_deterministic
+
+    device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
+
+    # env setup
+    envs = gym.vector.SyncVectorEnv(
+        [make_env(args.env_id, args.seed + i, i, args.capture_video, run_name)
+         for i in range(args.num_envs)]
+    )
+    assert isinstance(envs.single_action_space, gym.spaces.Discrete), \
+        "only discrete action space is supported"
+
+    agent = Agent(envs).to(device)
+    optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
+
+    # ALGO Logic: Storage setup
+    obs = torch.zeros((args.num_steps, args.num_envs) + (num_frames, x, y ) ).to(device)
+    print("envs.single_observation_space.shape", envs.single_observation_space.shape)
+    actions = torch.zeros((args.num_steps, args.num_envs) + envs.single_action_space.shape).to(device)
+    logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
+    rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
+    dones = torch.zeros((args.num_steps, args.num_envs)).to(device)
+    values = torch.zeros((args.num_steps, args.num_envs)).to(device)
+
+    # TRY NOT TO MODIFY: start the game
+    global_step = 0
+    start_time = time.time()
+    next_obs = torch.Tensor(envs.reset()[0]).to(device)
+    next_done = torch.zeros(args.num_envs).to(device)
+    num_updates = args.total_timesteps // args.batch_size
+
+    stack = deque([], maxlen=4)
+    next_obs = get_reset_stack(stack, next_obs, num_frames, x, y)
+    print("next_obs.shape", next_obs.shape)
+    #exit()
+
+    for update in range(1, num_updates + 1):
+        # Annealing the rate if instructed to do so.
+        if args.anneal_lr:
+            frac = 1.0 - (update - 1.0) / num_updates
+            lrnow = frac * args.learning_rate
+            optimizer.param_groups[0]["lr"] = lrnow
+        avg_reward = 0
+        for step in range(0, args.num_steps):
+            #print("step", step)
+            global_step += 1 * args.num_envs
+            #print("before obs[step], next_obs.shape", next_obs.shape)
+            #print("obs.shape", obs.shape)
+            obs[step] = next_obs
+            dones[step] = next_done
+
+            # ALGO LOGIC: action logic
+            with torch.no_grad():
+                action, logprob, _, value = agent.get_action_and_value(next_obs)
+                values[step] = value.flatten()
+            actions[step] = action
+            logprobs[step] = logprob
+            #reward = 0
+            # TRY NOT TO MODIFY: execute the game and log data.
+            for _ in range(4):
+                next_obs, reward, done, truncated, infos = envs.step(action.cpu().numpy())
+                #reward = reward  + temp_reward
+                stack = append_to_stack(stack,torch.reshape(torch.from_numpy(next_obs), (1, 1, x, y) ) )
+                if done:
+                    break
+            #if step % 100 == 0:
+            #    print("########## reward", reward)
+            avg_reward = avg_reward + reward
+            next_obs = get_current_stack(stack)
+            #print("next_obs.shape", next_obs.shape)
+            #exit()
+            rewards[step] = torch.tensor(reward).to(device).view(-1)
+            next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(done).to(device)
+            """
+            for info in infos["final_info"]:
+                # Skip the envs that are not done
+                if info is None:
+                    continue
+                print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
+                #print("step reward", reward)
+                writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
+                writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
+           
+            for item in info:
+                if "episode" in item.keys():
+                    print(f"global_step={global_step}, episodic_return={item['episode']['r']}")
+                    writer.add_scalar("charts/episodic_return", item["episode"]["r"], global_step)
+                    writer.add_scalar("charts/episodic_length", item["episode"]["l"], global_step)
+                    break
+            """
+        # bootstrap value if not done
+        with torch.no_grad():
+            next_value = agent.get_value(next_obs).reshape(1, -1)
+            advantages = torch.zeros_like(rewards).to(device)
+            lastgaelam = 0
+            for t in reversed(range(args.num_steps)):
+                if t == args.num_steps - 1:
+                    nextnonterminal = 1.0 - next_done
+                    nextvalues = next_value
+                else:
+                    nextnonterminal = 1.0 - dones[t + 1]
+                    nextvalues = values[t + 1]
+                delta = rewards[t] + args.gamma * nextvalues * nextnonterminal - values[t]
+                advantages[t] = lastgaelam = delta + args.gamma * args.gae_lambda \
+                    * nextnonterminal * lastgaelam
+            returns = advantages + values
+
+        # flatten the batch
+        b_obs = obs.reshape((-1,) + envs.single_observation_space.shape)
+        b_obs = obs.reshape((-1,) + (num_frames, x, y))
+        b_logprobs = logprobs.reshape(-1)
+        b_actions = actions.reshape((-1,) + envs.single_action_space.shape)
+        b_advantages = advantages.reshape(-1)
+        b_returns = returns.reshape(-1)
+        b_values = values.reshape(-1)
+
+        # Optimizing the policy and value network
+        b_inds = np.arange(args.batch_size)
+        clipfracs = []
+        for epoch in range(args.update_epochs):
+            np.random.shuffle(b_inds)
+            for start in range(0, args.batch_size, args.minibatch_size):
+                end = start + args.minibatch_size
+                mb_inds = b_inds[start:end]
+
+                _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds],
+                                                                              b_actions.long()[mb_inds])
+                logratio = newlogprob - b_logprobs[mb_inds]
+                ratio = logratio.exp()
+
+                with torch.no_grad():
+                    # calculate approx_kl http://joschu.net/blog/kl-approx.html
+                    old_approx_kl = (-logratio).mean()
+                    approx_kl = ((ratio - 1) - logratio).mean()
+                    clipfracs += [((ratio - 1.0).abs() > args.clip_coef).float().mean().item()]
+
+                mb_advantages = b_advantages[mb_inds]
+                if args.norm_adv:
+                    mb_advantages = (mb_advantages - mb_advantages.mean()) / (mb_advantages.std() + 1e-8)
+
+                # Policy loss
+                pg_loss1 = -mb_advantages * ratio
+                pg_loss2 = -mb_advantages * torch.clamp(ratio, 1 - args.clip_coef, 1 + args.clip_coef)
+                pg_loss = torch.max(pg_loss1, pg_loss2).mean()
+
+                # Value loss
+                newvalue = newvalue.view(-1)
+                if args.clip_vloss:
+                    v_loss_unclipped = (newvalue - b_returns[mb_inds]) ** 2
+                    v_clipped = b_values[mb_inds] + torch.clamp(
+                        newvalue - b_values[mb_inds],
+                        -args.clip_coef,
+                        args.clip_coef,
+                    )
+                    v_loss_clipped = (v_clipped - b_returns[mb_inds]) ** 2
+                    v_loss_max = torch.max(v_loss_unclipped, v_loss_clipped)
+                    v_loss = 0.5 * v_loss_max.mean()
+                else:
+                    v_loss = 0.5 * ((newvalue - b_returns[mb_inds]) ** 2).mean()
+
+                entropy_loss = entropy.mean()
+                loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef
+
+                optimizer.zero_grad()
+                loss.backward()
+                nn.utils.clip_grad_norm_(agent.parameters(), args.max_grad_norm)
+                optimizer.step()
+
+            if args.target_kl is not None:
+                if approx_kl > args.target_kl:
+                    break
+
+        y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
+        var_y = np.var(y_true)
+        explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
+
+        # TRY NOT TO MODIFY: record rewards for plotting purposes
+        writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
+        writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
+        writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
+        writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
+        writer.add_scalar("losses/old_approx_kl", old_approx_kl.item(), global_step)
+        writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
+        writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
+        writer.add_scalar("losses/explained_variance", explained_var, global_step)
+        print("SPS:", int(global_step / (time.time() - start_time)), ',  avg_reward:',
+              avg_reward / args.num_steps)
+        writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+
+    envs.close()
+    writer.close()
+    
+"""
 if __name__ == "__main__":
     args = parse_args()
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
@@ -195,8 +465,11 @@ if __name__ == "__main__":
     # TRY NOT TO MODIFY: start the game
     global_step = 0
     start_time = time.time()
-    #next_obs = envs.reset()[0]
-    next_obs = torch.Tensor(envs.reset()[0]).to(device)
+    initial_obs = envs.reset()[0]
+    # Repeat the single frame observation 4 times to match the expected input of the CNN
+    initial_obs_tensor = torch.Tensor(initial_obs).to(device)
+    next_obs = initial_obs_tensor.unsqueeze(0).expand(-1, 4, -1, -1)  # Shape: [1, 4, 84, 84]
+
     next_done = torch.zeros(args.num_envs).to(device)
     num_updates = args.total_timesteps // args.batch_size
 
@@ -208,50 +481,68 @@ if __name__ == "__main__":
             frac = 1.0 - (update - 1.0) / num_updates
             lrnow = frac * args.learning_rate
             optimizer.param_groups[0]["lr"] = lrnow
-        """
-        for step in range(0, args.num_steps):
-            global_step += 1 * args.num_envs
-            obs[step] = next_obs
-            dones[step] = next_done
-
-            # ALGO LOGIC: action logic
-            with torch.no_grad():
-                action, logprob, _, value = agent.get_action_and_value(next_obs)
-                values[step] = value.flatten()
-            actions[step] = action
-            logprobs[step] = logprob
-
-            # TRY NOT TO MODIFY: execute the game and log data.
-            next_obs, reward, done, truncated, infos = envs.step(action.cpu().numpy())
-            rewards[step] = torch.tensor(reward).to(device).view(-1)
-            next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(done).to(device)
-        """
             
-
+        method = 'frame_duplication'
         for step in range(0, args.num_steps):
             global_step += 1 * args.num_envs
+            
+            if len(stacked_frames) == 4:
+                print("len(stacked_frames) == 4:")
+                obs[step] = torch.stack(list(stacked_frames), dim=1)
+            else:
+                print("next_obs.shape[1])",next_obs.shape[1], "next_obs.shape", next_obs.shape)
+                print("obs.shape",obs.shape)
+                exit()
+                obs[step, :next_obs.shape[1], :, :] = next_obs
+
             obs[step] = torch.stack(list(stacked_frames), dim=1) if len(stacked_frames) == 4 else next_obs
             dones[step] = next_done
 
+            print(obs[step].size())
+            exit()
             # ALGO LOGIC: action logic
             with torch.no_grad():
-                action, logprob, _, value = agent.get_action_and_value(obs[step] if len(stacked_frames) == 4 else next_obs)
+                action, logprob, _, value = agent.get_action_and_value(obs[step] 
+                                                                       if len(stacked_frames)
+                                                                       == 4 else next_obs)
                 values[step] = value.flatten()
             actions[step] = action
             logprobs[step] = logprob
 
             # This replaces the MaxAndSkipEnv functionality
             last_frames = []
-            for _ in range(4):  # Repeat the same action 4 times
-                next_o, reward, done, truncated, infos = envs.step(action.cpu().numpy())
-                last_frames.append(torch.Tensor(next_o))
-                if done:
-                    break
-            next_obs = torch.stack(last_frames, dim=1)
-            stacked_frames.append(next_obs)
-            next_done = torch.Tensor(done).to(device)
-            # ... rest of your loop ...
+            last_rewards = []
+            frames_from_new_episode = []
 
+            for _ in range(4):  # Repeat the same action 4 times
+                next_o, reward, done, info = envs.step(action.cpu().numpy())
+                last_frames.append(torch.Tensor(next_o))
+                last_rewards.append(reward)
+
+                # Check if the episode ended
+                if done:
+                    if method == 'zero_padding':
+                        # Fill the remaining frames with zeros
+                        for _ in range(4 - len(last_frames)):
+                            zero_frame = torch.zeros_like(torch.Tensor(next_o))
+                            last_frames.append(zero_frame)
+                        break
+                    elif method == 'frame_duplication':
+                        # Duplicate the last frame
+                        for _ in range(4 - len(last_frames)):
+                            last_frames.append(torch.Tensor(next_o))
+                        break
+                    elif method == 'stack_across':
+                        frames_from_new_episode.append(torch.Tensor(next_o))
+                    else:
+                        raise ValueError("Unknown method")
+
+            # Combine frames from the ended episode and the new episode
+            if method == 'stack_across' and len(frames_from_new_episode) > 0:
+                last_frames = last_frames[:4-len(frames_from_new_episode)] + frames_from_new_episode
+
+            reward = sum(last_rewards)
+        
 
             if "final_info" in infos:
                 for info in infos["final_info"]:
@@ -363,3 +654,4 @@ if __name__ == "__main__":
 
     envs.close()
     writer.close()
+"""    

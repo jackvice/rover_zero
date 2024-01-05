@@ -48,7 +48,7 @@ class Args:
     """total timesteps of the experiments"""
     learning_rate: float = 2.5e-4
     """the learning rate of the optimizer"""
-    num_envs: int = 8
+    num_envs: int = 1
     """the number of parallel game environments"""
     num_steps: int = 128
     """the number of steps to run in each environment per policy rollout"""
@@ -146,6 +146,243 @@ class Agent(nn.Module):
         return action, probs.log_prob(action), probs.entropy(), self.critic(hidden)
 
 
+def execute_step(agent, envs, step, storage_vars, args, device, writer, global_step):
+    obs, actions, logprobs, rewards, dones, values, next_obs, next_done = storage_vars
+    
+    with torch.no_grad():
+        action, logprob, _, value = agent.get_action_and_value(next_obs)
+        values[step] = value.flatten()
+    actions[step] = action
+    logprobs[step] = logprob
+
+    next_obs, reward, terminations, truncations, infos = envs.step(action.cpu().numpy())
+    next_done = np.logical_or(terminations, truncations)
+    rewards[step] = torch.tensor(reward).to(device).view(-1)
+    next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
+
+    # Log data if necessary
+    # ...
+
+    return obs, actions, logprobs, rewards, dones, values, next_obs, next_done
+
+def calculate_advantages_returns(storage_vars, agent, args, device):
+    obs, actions, logprobs, rewards, dones, values, next_obs, next_done = storage_vars
+
+    with torch.no_grad():
+        next_value = agent.get_value(next_obs).reshape(1, -1)
+        advantages = torch.zeros_like(rewards).to(device)
+        lastgaelam = 0
+        for t in reversed(range(args.num_steps)):
+            if t == args.num_steps - 1:
+                nextnonterminal = 1.0 - next_done
+                nextvalues = next_value
+            else:
+                nextnonterminal = 1.0 - dones[t + 1]
+                nextvalues = values[t + 1]
+            delta = rewards[t] + args.gamma * nextvalues * nextnonterminal - values[t]
+            advantages[t] = lastgaelam = delta + args.gamma * \
+                args.gae_lambda * nextnonterminal * lastgaelam
+        returns = advantages + values
+
+    return advantages, returns
+
+def flatten_batch(storage_vars, envs):
+    obs, actions, logprobs, rewards, dones, values = storage_vars
+
+    b_obs = obs.reshape((-1,) + envs.single_observation_space.shape)
+    b_logprobs = logprobs.reshape(-1)
+    b_actions = actions.reshape((-1,) + envs.single_action_space.shape)
+    b_values = values.reshape(-1)
+
+    return b_obs, b_logprobs, b_actions, b_values
+
+def optimize_policy_value_network(agent, optimizer, args, flattened_vars):
+    b_obs, b_logprobs, b_actions, b_values, b_advantages, b_returns = flattened_vars
+    b_inds = np.arange(args.batch_size)
+    clipfracs = []
+
+    for epoch in range(args.update_epochs):
+        np.random.shuffle(b_inds)
+        for start in range(0, args.batch_size, args.minibatch_size):
+            end = start + args.minibatch_size
+            mb_inds = b_inds[start:end]
+            _, newlogprob, entropy, newvalue = \
+                    agent.get_action_and_value(b_obs[mb_inds], b_actions.long()[mb_inds])
+            logratio = newlogprob - b_logprobs[mb_inds]
+            ratio = logratio.exp()
+
+            with torch.no_grad():
+                # calculate approx_kl http://joschu.net/blog/kl-approx.html
+                old_approx_kl = (-logratio).mean()
+                approx_kl = ((ratio - 1) - logratio).mean()
+                clipfracs += [((ratio - 1.0).abs() > args.clip_coef).float().mean().item()]
+
+            mb_advantages = b_advantages[mb_inds]
+            if args.norm_adv:
+                mb_advantages = (mb_advantages - mb_advantages.mean()) / \
+                    (mb_advantages.std() + 1e-8)
+
+            # Policy loss
+            pg_loss1 = -mb_advantages * ratio
+            pg_loss2 = -mb_advantages * torch.clamp(ratio, 1 - args.clip_coef,\
+                                                        1 + args.clip_coef)
+            pg_loss = torch.max(pg_loss1, pg_loss2).mean()
+
+            # Value loss
+            newvalue = newvalue.view(-1)
+            if args.clip_vloss:
+                v_loss_unclipped = (newvalue - b_returns[mb_inds]) ** 2
+                v_clipped = b_values[mb_inds] + torch.clamp(
+                    newvalue - b_values[mb_inds],
+                    -args.clip_coef,
+                    args.clip_coef,
+                )
+                v_loss_clipped = (v_clipped - b_returns[mb_inds]) ** 2
+                v_loss_max = torch.max(v_loss_unclipped, v_loss_clipped)
+                v_loss = 0.5 * v_loss_max.mean()
+            else:
+                v_loss = 0.5 * ((newvalue - b_returns[mb_inds]) ** 2).mean()
+
+            entropy_loss = entropy.mean()
+            loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef
+
+            optimizer.zero_grad()
+            loss.backward()
+            nn.utils.clip_grad_norm_(agent.parameters(), args.max_grad_norm)
+            optimizer.step()
+
+        if args.target_kl is not None and approx_kl > args.target_kl:
+            break
+
+    return clipfracs
+
+
+def parse_args():
+    args = tyro.cli(Args)
+    args.batch_size = int(args.num_envs * args.num_steps)
+    args.minibatch_size = int(args.batch_size // args.num_minibatches)
+    args.num_iterations = args.total_timesteps // args.batch_size
+    return args
+
+def init_logging(args):
+    run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+    if args.track:
+        import wandb
+        wandb.init(
+            project=args.wandb_project_name,
+            entity=args.wandb_entity,
+            sync_tensorboard=True,
+            config=vars(args),
+            name=run_name,
+            monitor_gym=True,
+            save_code=True
+        )
+    writer = SummaryWriter(f"runs/{run_name}")
+    # Add hyperparameters to the log
+    return writer, run_name
+
+def set_seeds(args):
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.backends.cudnn.deterministic = args.torch_deterministic
+
+def setup_environment(args, run_name):
+    device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
+
+    # Create a list of environment constructor functions
+    env_fns = [lambda: make_env(args.env_id, i, args.capture_video, run_name)
+               for i in range(args.num_envs)]
+    envs = gym.vector.SyncVectorEnv([fn() for fn in env_fns])
+
+    agent = Agent(envs).to(device)
+    optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
+
+    return envs, agent, optimizer, device
+
+
+
+def setup_storage(args, envs, device):
+    obs = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(device)
+    actions = torch.zeros((args.num_steps, args.num_envs) + envs.single_action_space.shape).to(device)
+    logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
+    rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
+    dones = torch.zeros((args.num_steps, args.num_envs)).to(device)
+    values = torch.zeros((args.num_steps, args.num_envs)).to(device)
+    next_obs = torch.zeros(envs.single_observation_space.shape).to(device)
+    next_done = torch.zeros(args.num_envs).to(device)
+
+    return obs, actions, logprobs, rewards, dones, values, next_obs, next_done
+
+
+
+def main_loop(args, envs, agent, optimizer, storage_vars, device, writer, run_name):
+    global_step, start_time = 0, time.time()
+    next_obs, _ = envs.reset(seed=args.seed)
+    next_obs = torch.Tensor(next_obs).to(device)
+    next_done = torch.zeros(args.num_envs).to(device)
+
+    for iteration in range(1, args.num_iterations + 1):
+        obs, actions, logprobs, rewards, dones, values, next_obs, next_done = storage_vars
+        for step in range(args.num_steps):
+            global_step += args.num_envs
+            storage_vars = execute_step(agent, envs, step,
+                                        (obs, actions, logprobs, rewards,
+                                         dones, values, next_obs, next_done),
+                                        args, device, writer, global_step)
+            obs, actions, logprobs, rewards, dones, values, next_obs, next_done = storage_vars
+
+        advantages, returns = calculate_advantages_returns((obs, actions, logprobs,
+                                                            rewards, dones, values,
+                                                            next_obs, next_done), agent, args, device)
+        b_obs, b_logprobs, b_actions, b_values = flatten_batch((obs, actions, logprobs,
+                                                                rewards, dones, values), envs)
+        flattened_vars = (b_obs, b_logprobs, b_actions, b_values, advantages, returns)
+        clipfracs = optimize_policy_value_network(agent, optimizer, args, flattened_vars)
+
+        # Add any logging or saving functionality here
+
+    # Additional code for saving models, closing environments, etc.
+
+
+    # Additional code for saving models, closing environments, etc.
+    y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
+    var_y = np.var(y_true)
+    explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
+
+    # TRY NOT TO MODIFY: record rewards for plotting purposes
+    writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
+    writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
+    writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
+    writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
+    writer.add_scalar("losses/old_approx_kl", old_approx_kl.item(), global_step)
+    writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
+    writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
+    writer.add_scalar("losses/explained_variance", explained_var, global_step)
+    print("SPS:", int(global_step / (time.time() - start_time)))
+    writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+
+    envs.close()
+    writer.close()
+
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    writer, run_name = init_logging(args)
+    set_seeds(args)
+    envs, agent, optimizer, device = setup_environment(args, run_name)
+    storage_vars = setup_storage(args, envs, device)
+    main_loop(args, envs, agent, optimizer, storage_vars, device, writer, run_name)
+
+
+
+
+
+
+
+#################################################################################################
+exit()
 if __name__ == "__main__":
     args = tyro.cli(Args)
     args.batch_size = int(args.num_envs * args.num_steps)
