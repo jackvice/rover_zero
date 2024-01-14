@@ -13,6 +13,85 @@ import tyro
 from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 
+class Agent(nn.Module):
+    def __init__(self, env):
+        super().__init__()
+        obs_space = env.observation_space
+        act_space = env.action_space
+
+        # Assuming the observation space is a Box and action space is Discrete
+        self.critic = nn.Sequential(
+            layer_init(nn.Linear(np.array(obs_space.shape).prod(), 64)),
+            nn.Tanh(),
+            layer_init(nn.Linear(64, 64)),
+            nn.Tanh(),
+            layer_init(nn.Linear(64, 1), std=1.0),
+        )
+        self.actor = nn.Sequential(
+            layer_init(nn.Linear(np.array(obs_space.shape).prod(), 64)),
+            nn.Tanh(),
+            layer_init(nn.Linear(64, 64)),
+            nn.Tanh(),
+            layer_init(nn.Linear(64, act_space.n), std=0.01),
+        )
+
+    def get_value(self, x):
+        return self.critic(x)
+
+    def get_action_and_value(self, x, action=None):
+        logits = self.actor(x)
+        probs = Categorical(logits=logits)
+        if action is None:
+            action = probs.sample()
+        return action, probs.log_prob(action), probs.entropy(), self.critic(x)
+
+
+def initialize_game(args, env, device):
+    """
+    Initializes the game for a single environment by setting the global step, start time, and getting 
+    the initial observation and done flag.
+
+    Parameters:
+    args (Namespace): Contains arguments like the seed.
+    env (Env): The single environment to reset and start a new game.
+    device (Device): The device to use for tensor operations.
+
+    Returns:
+    tuple: A tuple containing the initial observation (next_obs), initial done flag (next_done), 
+           global step, and start time.
+    """
+    global_step = 0
+    start_time = time.time()
+    next_obs, _ = env.reset(seed=args.seed)  # Resetting the single environment
+    next_obs = torch.from_numpy(next_obs).float().to(device)  # Convert to torch tensor
+    # Initial done flag for a single environment
+    next_done = torch.tensor([False], dtype=torch.float32, device=device)  
+    return next_obs, next_done, global_step, start_time
+
+    
+def take_step(step, env, action, device, rewards, global_step, writer):
+    # TRY NOT TO MODIFY: execute the game and log data.
+    # Assuming action is a scalar for a single environment
+
+    next_obs, reward, terminated, truncated, info = env.step(action.cpu().numpy())
+    
+    # Combine the terminated and truncated flags to create a single 'done' flag
+    next_done = terminated or truncated
+    #print("terminated is",terminated, "  and truncated is", truncated)
+    
+    rewards[step] = torch.tensor([reward], device=device)  # Reward is now a single value
+    #next_done = torch.tensor([next_done], dtype=torch.float32, device=device)#Done is now a single value
+    next_done = torch.Tensor([next_done]).to(device)
+    next_obs = torch.Tensor(next_obs).to(device)
+    # Handling episode logging for single environment
+    if "episode" in info:
+        print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
+        writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
+        writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
+
+    return rewards, next_obs, next_done
+
+
 def rover_main():
     args, run_name = initialize_args()
     device, writer = setup_logging_and_seeding(args, run_name)
@@ -24,8 +103,6 @@ def rover_main():
     assert isinstance(env.action_space, gym.spaces.Discrete), "only discrete action space is supported"
     agent = Agent(env).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
-    # ... rest of your code ...
-
     
     # ALGO Logic: Storage setup
     obs, actions, logprobs, rewards, dones, values = initialize_storage(args, env, device)
@@ -40,6 +117,7 @@ def rover_main():
             optimizer.param_groups[0]["lr"] = lrnow
 
         for step in range(0, args.num_steps):
+            #print('step', step)
             global_step += 1
             obs[step] = next_obs
             dones[step] = next_done
@@ -53,6 +131,11 @@ def rover_main():
 
             rewards, next_obs, next_done = take_step(step, env, action, device,
                                                      rewards, global_step, writer)
+            if next_done:
+                # If the episode is done, reset the environment
+                next_obs, _ = env.reset(seed=args.seed)
+                next_obs = torch.from_numpy(next_obs).float().to(device)
+                next_done = torch.tensor([False], dtype=torch.float32, device=device)
 
         #bootstrap value if not done 
         advantages, returns = calculate_advantages_and_returns(args, next_obs, agent, device,
@@ -148,41 +231,6 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     return layer
 
 
-class Agent(nn.Module):
-    def __init__(self, env):
-        super().__init__()
-        obs_space = env.observation_space
-        act_space = env.action_space
-
-        # Assuming the observation space is a Box and action space is Discrete
-        self.critic = nn.Sequential(
-            layer_init(nn.Linear(np.array(obs_space.shape).prod(), 64)),
-            nn.Tanh(),
-            layer_init(nn.Linear(64, 64)),
-            nn.Tanh(),
-            layer_init(nn.Linear(64, 1), std=1.0),
-        )
-        self.actor = nn.Sequential(
-            layer_init(nn.Linear(np.array(obs_space.shape).prod(), 64)),
-            nn.Tanh(),
-            layer_init(nn.Linear(64, 64)),
-            nn.Tanh(),
-            layer_init(nn.Linear(64, act_space.n), std=0.01),
-        )
-
-    def get_value(self, x):
-        return self.critic(x)
-
-    def get_action_and_value(self, x, action=None):
-        logits = self.actor(x)
-        probs = Categorical(logits=logits)
-        if action is None:
-            action = probs.sample()
-        return action, probs.log_prob(action), probs.entropy(), self.critic(x)
-
-
-
-
 def calculate_advantages_and_returns(args, next_obs, agent, device, dones, rewards, values, next_done):
     """
     Calculates advantages and returns for the current batch of data.
@@ -213,78 +261,24 @@ def calculate_advantages_and_returns(args, next_obs, agent, device, dones, rewar
         returns = advantages + values
     return advantages, returns
 
-def take_step(step, env, action, device, rewards, global_step, writer):
+
+
+def take_step_vec(step, envs, action, device, rewards, global_step, writer):
     # TRY NOT TO MODIFY: execute the game and log data.
-    # Assuming action is a scalar for a single environment
-    next_obs, reward, terminated, truncated, info = env.step(action.item())
-    print("reward", reward)
-    print(action.item())
-    
-    # Combine the terminated and truncated flags to create a single 'done' flag
-    done = terminated or truncated
-    next_obs = torch.from_numpy(next_obs).float().to(device)
-    rewards[step] = torch.tensor([reward], device=device)  # Reward is now a single value
-    next_done = torch.tensor([done], dtype=torch.float32, device=device)  # Done is now a single value
+    next_obs, reward, terminations, truncations, infos = envs.step(action.cpu().numpy())
+    next_done = np.logical_or(terminations, truncations)
+    rewards[step] = torch.tensor(reward).to(device).view(-1)
+    next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
+    #print('   Before if, in main, infos:', infos)
+    if "final_info" in infos:
+        #print('main infos:', infos)
+        for info in infos["final_info"]:
+            if info and "episode" in info:
+                print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
+                writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
+                writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
 
-    # Handling episode logging for single environment
-    if "episode" in info:
-        print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
-        writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
-        writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
-
-    return rewards, next_obs, next_done
-
-
-
-def initialize_game(args, env, device):
-    """
-    Initializes the game for a single environment by setting the global step, start time, and getting 
-    the initial observation and done flag.
-
-    Parameters:
-    args (Namespace): Contains arguments like the seed.
-    env (Env): The single environment to reset and start a new game.
-    device (Device): The device to use for tensor operations.
-
-    Returns:
-    tuple: A tuple containing the initial observation (next_obs), initial done flag (next_done), 
-           global step, and start time.
-    """
-    global_step = 0
-    start_time = time.time()
-    next_obs = env.reset(seed=args.seed)  # Resetting the single environment
-    print("Type of next_obs:", type(next_obs))  # Check the type
-    print("next_obs content:", next_obs)  # Inspect the content
-
-    exit()
-    next_obs = torch.from_numpy(next_obs).float().to(device)  # Convert to torch tensor
-    # Initial done flag for a single environment
-    next_done = torch.tensor([False], dtype=torch.float32, device=device)  
-
-    return next_obs, next_done, global_step, start_time
-
-
-def initialize_game(args, env, device):
-    """
-    Initializes the game for a single environment by setting the global step, start time, and getting 
-    the initial observation and done flag.
-
-    Parameters:
-    args (Namespace): Contains arguments like the seed.
-    env (Env): The single environment to reset and start a new game.
-    device (Device): The device to use for tensor operations.
-
-    Returns:
-    tuple: A tuple containing the initial observation (next_obs), initial done flag (next_done), 
-           global step, and start time.
-    """
-    global_step = 0
-    start_time = time.time()
-    next_obs, _ = env.reset(seed=args.seed)  # Resetting the single environment
-    next_obs = torch.from_numpy(next_obs).float().to(device)  # Convert to torch tensor
-    next_done = torch.tensor([False], dtype=torch.float32, device=device)  # Initial done flag for a single environment
-
-    return next_obs, next_done, global_step, start_time
+    return rewards, next_obs, next_done 
 
 
 

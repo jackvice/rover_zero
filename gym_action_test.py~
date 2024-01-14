@@ -1,0 +1,21 @@
+import gymnasium as gym
+
+# List all available environments
+all_envs = gym.envs.registry.all()
+multi_discrete_envs = []
+
+# Check for environments with MultiDiscrete action space
+for env in all_envs:
+    try:
+        env_spec = gym.spec(env.id)
+        with env_spec.make() as temp_env:
+            if isinstance(temp_env.action_space, gym.spaces.MultiDiscrete):
+                multi_discrete_envs.append(env.id)
+    except Exception:
+        # Some environments might fail to instantiate, so we'll just skip those
+        pass
+
+# Print the environments with MultiDiscrete action space
+print("Environments with MultiDiscrete Action Space:")
+for env_id in multi_discrete_envs:
+    print(env_id)
