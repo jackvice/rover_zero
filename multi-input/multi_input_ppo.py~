@@ -3,8 +3,8 @@ import os
 import random
 import time
 from dataclasses import dataclass
+
 import gymnasium as gym
-from gymnasium.wrappers import PixelObservationWrapper
 import numpy as np
 import torch
 import torch.nn as nn
@@ -54,6 +54,7 @@ def rover_main():
         #bootstrap value if not done 
         advantages, returns = calculate_advantages_and_returns(args, next_obs, agent, device,
                                                                dones, rewards, values, next_done)
+   
         # flatten the batch
         b_obs, b_logprobs, b_actions, b_advantages, b_returns, b_values = \
             flatten_batches(envs, obs, logprobs, actions, advantages, returns, values)
@@ -88,7 +89,15 @@ def rover_main():
                 # Value loss
                 newvalue = newvalue.view(-1)
                 if args.clip_vloss:
-                    v_loss = clip_vloss(args, newvalue, b_returns, mb_inds, b_values)
+                    v_loss_unclipped = (newvalue - b_returns[mb_inds]) ** 2
+                    v_clipped = b_values[mb_inds] + torch.clamp(
+                        newvalue - b_values[mb_inds],
+                        -args.clip_coef,
+                        args.clip_coef,
+                    )
+                    v_loss_clipped = (v_clipped - b_returns[mb_inds]) ** 2
+                    v_loss_max = torch.max(v_loss_unclipped, v_loss_clipped)
+                    v_loss = 0.5 * v_loss_max.mean()
                 else:
                     v_loss = 0.5 * ((newvalue - b_returns[mb_inds]) ** 2).mean()
 
@@ -107,25 +116,13 @@ def rover_main():
         var_y = np.var(y_true)
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
 
+
         log_training_metrics(writer, optimizer, global_step, v_loss, pg_loss,
                              entropy_loss, old_approx_kl, approx_kl, clipfracs, explained_var, start_time)
+
     envs.close()
     writer.close()
 
-    
-def clip_vloss(args, newvalue, b_returns, mb_inds, b_values):
-     v_loss_unclipped = (newvalue - b_returns[mb_inds]) ** 2
-     v_clipped = b_values[mb_inds] + torch.clamp(
-         newvalue - b_values[mb_inds],
-         -args.clip_coef,
-         args.clip_coef,
-     )
-     v_loss_clipped = (v_clipped - b_returns[mb_inds]) ** 2
-     v_loss_max = torch.max(v_loss_unclipped, v_loss_clipped)
-     v_loss = 0.5 * v_loss_max.mean()
-     return v_loss
-
-     
 def make_env(env_id, idx, capture_video, run_name):
     def thunk():
         if capture_video and idx == 0:
