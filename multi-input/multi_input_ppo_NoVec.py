@@ -65,7 +65,7 @@ def initialize_game(args, env, device):
     next_obs, _ = env.reset(seed=args.seed)  # Resetting the single environment
     next_obs = torch.from_numpy(next_obs).float().to(device)  # Convert to torch tensor
     # Initial done flag for a single environment
-    next_done = torch.tensor([False], dtype=torch.float32, device=device)  
+    next_done = torch.tensor(0, dtype=torch.float32, device=device)  
     return next_obs, next_done, global_step, start_time
 
     
@@ -74,21 +74,17 @@ def take_step(step, env, action, device, rewards, global_step, writer):
     # Assuming action is a scalar for a single environment
 
     next_obs, reward, terminated, truncated, info = env.step(action.cpu().numpy())
-    
-    # Combine the terminated and truncated flags to create a single 'done' flag
-    next_done = terminated or truncated
-    #print("terminated is",terminated, "  and truncated is", truncated)
-    
+
+    next_done = np.logical_or([terminated], [truncated])
+    next_done = torch.Tensor(next_done).to(device)
+    next_done = torch.Tensor(next_done[0]).to(device)#Done is now a single value
     rewards[step] = torch.tensor([reward], device=device)  # Reward is now a single value
-    #next_done = torch.tensor([next_done], dtype=torch.float32, device=device)#Done is now a single value
-    next_done = torch.Tensor([next_done]).to(device)
     next_obs = torch.Tensor(next_obs).to(device)
     # Handling episode logging for single environment
     if "episode" in info:
         print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
         writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
         writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
-
     return rewards, next_obs, next_done
 
 
@@ -120,6 +116,7 @@ def rover_main():
             #print('step', step)
             global_step += 1
             obs[step] = next_obs
+            print("next_done", next_done)
             dones[step] = next_done
 
             # ALGO LOGIC: action logic
@@ -131,11 +128,14 @@ def rover_main():
 
             rewards, next_obs, next_done = take_step(step, env, action, device,
                                                      rewards, global_step, writer)
+            print("step:", step,",  action:", action,",   next_obs:",
+                  next_obs, ",  next_done:", next_done)
+            
             if next_done:
                 # If the episode is done, reset the environment
-                next_obs, _ = env.reset(seed=args.seed)
+                next_obs, _ = env.reset()
+                next_done = torch.Tensor(0).to(device)
                 next_obs = torch.from_numpy(next_obs).float().to(device)
-                next_done = torch.tensor([False], dtype=torch.float32, device=device)
 
         #bootstrap value if not done 
         advantages, returns = calculate_advantages_and_returns(args, next_obs, agent, device,
@@ -260,26 +260,6 @@ def calculate_advantages_and_returns(args, next_obs, agent, device, dones, rewar
                 nextnonterminal * lastgaelam
         returns = advantages + values
     return advantages, returns
-
-
-
-def take_step_vec(step, envs, action, device, rewards, global_step, writer):
-    # TRY NOT TO MODIFY: execute the game and log data.
-    next_obs, reward, terminations, truncations, infos = envs.step(action.cpu().numpy())
-    next_done = np.logical_or(terminations, truncations)
-    rewards[step] = torch.tensor(reward).to(device).view(-1)
-    next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
-    #print('   Before if, in main, infos:', infos)
-    if "final_info" in infos:
-        #print('main infos:', infos)
-        for info in infos["final_info"]:
-            if info and "episode" in info:
-                print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
-                writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
-                writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
-
-    return rewards, next_obs, next_done 
-
 
 
 def initialize_storage(args, env, device):

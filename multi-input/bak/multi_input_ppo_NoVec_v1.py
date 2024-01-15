@@ -13,22 +13,100 @@ import tyro
 from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 
+class Agent(nn.Module):
+    def __init__(self, env):
+        super().__init__()
+        obs_space = env.observation_space
+        act_space = env.action_space
+
+        # Assuming the observation space is a Box and action space is Discrete
+        self.critic = nn.Sequential(
+            layer_init(nn.Linear(np.array(obs_space.shape).prod(), 64)),
+            nn.Tanh(),
+            layer_init(nn.Linear(64, 64)),
+            nn.Tanh(),
+            layer_init(nn.Linear(64, 1), std=1.0),
+        )
+        self.actor = nn.Sequential(
+            layer_init(nn.Linear(np.array(obs_space.shape).prod(), 64)),
+            nn.Tanh(),
+            layer_init(nn.Linear(64, 64)),
+            nn.Tanh(),
+            layer_init(nn.Linear(64, act_space.n), std=0.01),
+        )
+
+    def get_value(self, x):
+        return self.critic(x)
+
+    def get_action_and_value(self, x, action=None):
+        logits = self.actor(x)
+        probs = Categorical(logits=logits)
+        if action is None:
+            action = probs.sample()
+        return action, probs.log_prob(action), probs.entropy(), self.critic(x)
+
+
+def initialize_game(args, env, device):
+    """
+    Initializes the game for a single environment by setting the global step, start time, and getting 
+    the initial observation and done flag.
+
+    Parameters:
+    args (Namespace): Contains arguments like the seed.
+    env (Env): The single environment to reset and start a new game.
+    device (Device): The device to use for tensor operations.
+
+    Returns:
+    tuple: A tuple containing the initial observation (next_obs), initial done flag (next_done), 
+           global step, and start time.
+    """
+    global_step = 0
+    start_time = time.time()
+    next_obs, _ = env.reset(seed=args.seed)  # Resetting the single environment
+    next_obs = torch.from_numpy(next_obs).float().to(device)  # Convert to torch tensor
+    # Initial done flag for a single environment
+    next_done = torch.tensor([False], dtype=torch.float32, device=device)  
+    return next_obs, next_done, global_step, start_time
+
+    
+def take_step(step, env, action, device, rewards, global_step, writer):
+    # TRY NOT TO MODIFY: execute the game and log data.
+    # Assuming action is a scalar for a single environment
+
+    next_obs, reward, terminated, truncated, info = env.step(action.cpu().numpy())
+    # Combine the terminated and truncated flags to create a single 'done' flag
+    next_done = terminated or truncated
+    #print("terminated is",terminated, "  and truncated is", truncated)
+    
+    rewards[step] = torch.tensor([reward], device=device)  # Reward is now a single value
+    #next_done = torch.tensor([next_done], dtype=torch.float32, device=device)#Done is now a single value
+    #next_done = torch.Tensor([next_done]).to(device)
+    
+    next_obs = torch.Tensor(next_obs).to(device)
+    # Handling episode logging for single environment
+    if "episode" in info:
+        print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
+        writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
+        writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
+    return rewards, next_obs, next_done
 
 
 def rover_main():
     args, run_name = initialize_args()
     device, writer = setup_logging_and_seeding(args, run_name)
-    # env setup
-    envs = gym.vector.SyncVectorEnv(
-        [make_env(args.env_id, i, args.capture_video, run_name) for i in range(args.num_envs)],
-    )
-    assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
-    agent = Agent(envs).to(device)
+
+    # env setup - make sure to call the function returned by make_env to create the environment
+    env_creator = make_env(args.env_id, 0, args.capture_video, run_name)
+    env = env_creator()  # Create the environment instance
+
+    assert isinstance(env.action_space, gym.spaces.Discrete), "only discrete action space is supported"
+    agent = Agent(env).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
+    
     # ALGO Logic: Storage setup
-    obs, actions, logprobs, rewards, dones, values = initialize_storage(args, envs, device)
+    obs, actions, logprobs, rewards, dones, values = initialize_storage(args, env, device)
     # TRY NOT TO MODIFY: start the game
-    next_obs, next_done, global_step, start_time = initialize_game(args, envs, device)
+    next_obs, next_done, global_step, start_time = initialize_game(args, env, device)
 
     for iteration in range(1, args.num_iterations + 1):
         # Annealing the rate if instructed to do so.
@@ -38,7 +116,8 @@ def rover_main():
             optimizer.param_groups[0]["lr"] = lrnow
 
         for step in range(0, args.num_steps):
-            global_step += args.num_envs
+            #print('step', step)
+            global_step += 1
             obs[step] = next_obs
             dones[step] = next_done
 
@@ -49,14 +128,22 @@ def rover_main():
             actions[step] = action
             logprobs[step] = logprob
 
-            rewards, next_obs, next_done = take_step(step, envs, action, device, rewards, global_step, writer)
+            rewards, next_obs, next_done = take_step(step, env, action, device,
+                                                     rewards, global_step, writer)
+            print("rewards", rewards[step],"next_obs", next_obs, "next_done", next_done)
+            
+            if next_done:
+                # If the episode is done, reset the environment
+                next_obs, _ = env.reset(seed=args.seed)
+                next_obs = torch.from_numpy(next_obs).float().to(device)
+                next_done = torch.tensor([False], dtype=torch.float32, device=device)
 
         #bootstrap value if not done 
         advantages, returns = calculate_advantages_and_returns(args, next_obs, agent, device,
                                                                dones, rewards, values, next_done)
         # flatten the batch
         b_obs, b_logprobs, b_actions, b_advantages, b_returns, b_values = \
-            flatten_batches(envs, obs, logprobs, actions, advantages, returns, values)
+            flatten_batches(env, obs, logprobs, actions, advantages, returns, values)
         
         # Optimizing the policy and value network
         b_inds = np.arange(args.batch_size)
@@ -109,7 +196,7 @@ def rover_main():
 
         log_training_metrics(writer, optimizer, global_step, v_loss, pg_loss,
                              entropy_loss, old_approx_kl, approx_kl, clipfracs, explained_var, start_time)
-    envs.close()
+    env.close()
     writer.close()
 
     
@@ -145,36 +232,6 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     return layer
 
 
-class Agent(nn.Module):
-    def __init__(self, envs):
-        super().__init__()
-        self.critic = nn.Sequential(
-            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 64)),
-            nn.Tanh(),
-            layer_init(nn.Linear(64, 64)),
-            nn.Tanh(),
-            layer_init(nn.Linear(64, 1), std=1.0),
-        )
-        self.actor = nn.Sequential(
-            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 64)),
-            nn.Tanh(),
-            layer_init(nn.Linear(64, 64)),
-            nn.Tanh(),
-            layer_init(nn.Linear(64, envs.single_action_space.n), std=0.01),
-        )
-
-    def get_value(self, x):
-        return self.critic(x)
-
-    def get_action_and_value(self, x, action=None):
-        logits = self.actor(x)
-        probs = Categorical(logits=logits)
-        if action is None:
-            action = probs.sample()
-        return action, probs.log_prob(action), probs.entropy(), self.critic(x)
-
-
-
 def calculate_advantages_and_returns(args, next_obs, agent, device, dones, rewards, values, next_done):
     """
     Calculates advantages and returns for the current batch of data.
@@ -205,74 +262,39 @@ def calculate_advantages_and_returns(args, next_obs, agent, device, dones, rewar
         returns = advantages + values
     return advantages, returns
 
-def take_step(step, envs, action, device, rewards, global_step, writer):
-    # TRY NOT TO MODIFY: execute the game and log data.
-    next_obs, reward, terminations, truncations, infos = envs.step(action.cpu().numpy())
-    next_done = np.logical_or(terminations, truncations)
-    rewards[step] = torch.tensor(reward).to(device).view(-1)
-    next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
-    #print('   Before if, in main, infos:', infos)
-    if "final_info" in infos:
-        #print('main infos:', infos)
-        for info in infos["final_info"]:
-            if info and "episode" in info:
-                print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
-                writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
-                writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
 
-    return rewards, next_obs, next_done 
-
-
-def initialize_game(args, envs, device):
+def initialize_storage(args, env, device):
     """
-    Initializes the game by setting the global step, start time, and getting the initial observations 
-    and done flags.
+    Initializes storage for observations, actions, log probabilities, rewards, dones, and values 
+    for a single environment.
 
     Parameters:
-    args (Namespace): Contains arguments like the seed.
-    envs (Env): The environment to reset and start a new game.
-    device (Device): The device to use for tensor operations.
-
-    Returns:
-    tuple: A tuple next_obs, done flags (next_done), global step, and start time.
-    """
-    global_step = 0
-    start_time = time.time()
-    next_obs, _ = envs.reset(seed=args.seed)
-    next_obs = torch.Tensor(next_obs).to(device)
-    next_done = torch.zeros(args.num_envs).to(device)
-
-    return next_obs, next_done, global_step, start_time
-
-
-def initialize_storage(args, envs, device):
-    """
-    Initializes storage for observations, actions, log probabilities, rewards, dones, and values.
-
-    Parameters:
-    args (Namespace): Contains arguments like the number of steps and environments.
-    envs (Env): The environment to get observation and action space.
+    args (Namespace): Contains arguments like the number of steps.
+    env (Env): The single environment to get observation and action space.
     device (Device): The device to use for tensor operations.
 
     Returns:
     tuple: A tuple containing initialized tensors for obs, actions, logprobs, rewards, dones, values.
     """
-    obs = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(device)
-    actions = torch.zeros((args.num_steps, args.num_envs) + envs.single_action_space.shape).to(device)
-    logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
-    rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
-    dones = torch.zeros((args.num_steps, args.num_envs)).to(device)
-    values = torch.zeros((args.num_steps, args.num_envs)).to(device)
+    obs_shape = env.observation_space.shape
+    action_shape = env.action_space.shape if isinstance(env.action_space, gym.spaces.Box) else (1,)
+
+    obs = torch.zeros((args.num_steps,) + obs_shape).to(device)
+    actions = torch.zeros((args.num_steps,) + action_shape).to(device)
+    logprobs = torch.zeros(args.num_steps).to(device)
+    rewards = torch.zeros(args.num_steps).to(device)
+    dones = torch.zeros(args.num_steps).to(device)
+    values = torch.zeros(args.num_steps).to(device)
 
     return obs, actions, logprobs, rewards, dones, values
 
 
-def flatten_batches(envs, obs, logprobs, actions, advantages, returns, values):
+def flatten_batches(env, obs, logprobs, actions, advantages, returns, values):
     """
-    Flattens the batched data for training.
+    Adjusts the data for training in a single environment context.
 
     Parameters:
-    envs (Env): The environment to get observation and action space.
+    env (Env): The single environment to get observation and action space.
     obs (Tensor): Observations from the environment.
     logprobs (Tensor): Log probabilities of the actions.
     actions (Tensor): Actions taken by the agent.
@@ -280,9 +302,12 @@ def flatten_batches(envs, obs, logprobs, actions, advantages, returns, values):
     returns (Tensor): Returns calculated for each step.
     values (Tensor): Values estimated by the agent.
     """
-    b_obs = obs.reshape((-1,) + envs.single_observation_space.shape)
+    # If the data is already structured for a single environment, 
+    # these lines might just pass the data through without changes.
+    b_obs = obs.reshape((-1,) + env.observation_space.shape)
     b_logprobs = logprobs.reshape(-1)
-    b_actions = actions.reshape((-1,) + envs.single_action_space.shape)
+    b_actions = actions.reshape((-1,) + env.action_space.shape
+                                if isinstance(env.action_space, gym.spaces.Box) else (-1, 1))
     b_advantages = advantages.reshape(-1)
     b_returns = returns.reshape(-1)
     b_values = values.reshape(-1)
@@ -291,53 +316,35 @@ def flatten_batches(envs, obs, logprobs, actions, advantages, returns, values):
 
 
 
-def log_training_metrics(writer, optimizer, global_step, v_loss, pg_loss, entropy_loss,
-                         old_approx_kl, approx_kl, clipfracs, explained_var, start_time):
-    """
-    Logs various training metrics to the writer.
 
-    Parameters:
-    writer (SummaryWriter): TensorBoard writer object for logging.
-    optimizer (Optimizer): The optimizer used in training.
-    global_step (int): The current global step in training.
-    v_loss (Tensor): Value loss tensor.
-    pg_loss (Tensor): Policy gradient loss tensor.
-    entropy_loss (Tensor): Entropy loss tensor.
-    old_approx_kl (Tensor): Old approximate KL divergence tensor.
-    approx_kl (Tensor): Approximate KL divergence tensor.
-    clipfracs (array): Array of clipping fractions.
-    explained_var (float): Explained variance value.
-    start_time (float): The start time of the training process.
-    """
-    writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
-    writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
-    writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
-    writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
-    writer.add_scalar("losses/old_approx_kl", old_approx_kl.item(), global_step)
-    writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
-    writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
-    writer.add_scalar("losses/explained_variance", explained_var, global_step)
-
-    sps = int(global_step / (time.time() - start_time))
-    print("SPS:", sps)
-    writer.add_scalar("charts/SPS", sps, global_step)
 
 
 def initialize_args():
     """
-    Initializes and sets up the arguments for the training process.
+    Initializes and sets up the arguments for the training process, adapted for a single environment.
 
     Returns:
     Namespace: The arguments after setup.
     str: The generated run name for the training.
     """
     args = tyro.cli(Args)
-    args.batch_size = int(args.num_envs * args.num_steps)
+    # For a single environment, batch size is typically equal to the number of steps per episode
+    args.batch_size = args.num_steps
+    # Minibatch size can be a divisor of batch size. Adjust as needed.
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
+    # Number of iterations is based on the total timesteps and batch size
     args.num_iterations = args.total_timesteps // args.batch_size
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
 
     return args, run_name
+
+def calc_some_losses(mb_advantages, ratio, args):
+    pg_loss1 = -mb_advantages * ratio
+    pg_loss2 = -mb_advantages * torch.clamp(ratio, 1 - args.clip_coef, 1 + args.clip_coef)
+    pg_loss = torch.max(pg_loss1, pg_loss2).mean()
+    return pg_loss
+
+
 
 
 def setup_logging_and_seeding(args, run_name):
@@ -375,12 +382,36 @@ def setup_logging_and_seeding(args, run_name):
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
     return device, writer
 
+def log_training_metrics(writer, optimizer, global_step, v_loss, pg_loss, entropy_loss,
+                         old_approx_kl, approx_kl, clipfracs, explained_var, start_time):
+    """
+    Logs various training metrics to the writer.
 
-def calc_some_losses(mb_advantages, ratio, args):
-    pg_loss1 = -mb_advantages * ratio
-    pg_loss2 = -mb_advantages * torch.clamp(ratio, 1 - args.clip_coef, 1 + args.clip_coef)
-    pg_loss = torch.max(pg_loss1, pg_loss2).mean()
-    return pg_loss
+    Parameters:
+    writer (SummaryWriter): TensorBoard writer object for logging.
+    optimizer (Optimizer): The optimizer used in training.
+    global_step (int): The current global step in training.
+    v_loss (Tensor): Value loss tensor.
+    pg_loss (Tensor): Policy gradient loss tensor.
+    entropy_loss (Tensor): Entropy loss tensor.
+    old_approx_kl (Tensor): Old approximate KL divergence tensor.
+    approx_kl (Tensor): Approximate KL divergence tensor.
+    clipfracs (array): Array of clipping fractions.
+    explained_var (float): Explained variance value.
+    start_time (float): The start time of the training process.
+    """
+    writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
+    writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
+    writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
+    writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
+    writer.add_scalar("losses/old_approx_kl", old_approx_kl.item(), global_step)
+    writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
+    writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
+    writer.add_scalar("losses/explained_variance", explained_var, global_step)
+
+    sps = int(global_step / (time.time() - start_time))
+    print("SPS:", sps)
+    writer.add_scalar("charts/SPS", sps, global_step)
 
 
 
@@ -411,7 +442,7 @@ class Args:
     """total timesteps of the experiments"""
     learning_rate: float = 2.5e-4
     """the learning rate of the optimizer"""
-    num_envs: int = 4
+    num_envs: int = 1
     """the number of parallel game environments"""
     num_steps: int = 128
     """the number of steps to run in each environment per policy rollout"""
@@ -452,15 +483,15 @@ if __name__ == "__main__":
     rover_main()
 
 
-def perform_environment_steps(next_obs, next_done, args, envs, agent, device,
+def perform_environment_steps(next_obs, next_done, args, env, agent, device,
                               writer, global_step, obs, dones, values,
                               actions, logprobs, rewards):
     """
-    Performs steps in the environment, collects observations, and logs data.
+    Performs steps in the single environment, collects observations, and logs data.
 
     Parameters:
-    args (Namespace): Contains arguments like the number of steps and environments.
-    envs (Env): The environment to interact with.
+    args (Namespace): Contains arguments like the number of steps.
+    env (Env): The single environment to interact with.
     agent (Agent): The agent that decides the actions.
     device (Device): The device to use for tensor operations.
     writer (Writer): Used for logging scalar values.
@@ -472,8 +503,8 @@ def perform_environment_steps(next_obs, next_done, args, envs, agent, device,
     logprobs (Tensor): Log probabilities of the actions.
     rewards (Tensor): Rewards obtained from the environment.
     """
-    for step in range(0, args.num_steps):
-        global_step += args.num_envs
+    for step in range(args.num_steps):
+        global_step += 1
         obs[step] = next_obs
         dones[step] = next_done
 
@@ -483,13 +514,14 @@ def perform_environment_steps(next_obs, next_done, args, envs, agent, device,
         actions[step] = action
         logprobs[step] = logprob
 
-        next_obs, reward, terminations, truncations, infos = envs.step(action.cpu().numpy())
-        next_done = np.logical_or(terminations, truncations)
-        rewards[step] = torch.tensor(reward).to(device).view(-1)
-        next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
+        next_obs, reward, done, info = env.step(action.item())  # Assuming a single action value
+        next_obs = torch.from_numpy(next_obs).float().to(device)
+        next_done = torch.tensor([done], dtype=torch.float32, device=device)
+        rewards[step] = torch.tensor([reward], device=device)
 
-        log_episode_info(infos, writer, global_step)
+        log_episode_info(info, writer, global_step)
         return global_step, rewards, values, obs, next_obs, actions, logprobs
+
 
 
 

@@ -49,8 +49,11 @@ def rover_main():
             actions[step] = action
             logprobs[step] = logprob
 
-            rewards, next_obs, next_done = take_step(step, envs, action, device, rewards, global_step, writer)
-
+            rewards, next_obs, next_done = take_step(step, envs, action, device,
+                                                     rewards, global_step, writer)
+            print("step:", step,",  action:", action,",   next_obs:",
+                  next_obs, ",  next_done:", next_done)
+                  
         #bootstrap value if not done 
         advantages, returns = calculate_advantages_and_returns(args, next_obs, agent, device,
                                                                dones, rewards, values, next_done)
@@ -208,9 +211,14 @@ def calculate_advantages_and_returns(args, next_obs, agent, device, dones, rewar
 def take_step(step, envs, action, device, rewards, global_step, writer):
     # TRY NOT TO MODIFY: execute the game and log data.
     next_obs, reward, terminations, truncations, infos = envs.step(action.cpu().numpy())
+
     next_done = np.logical_or(terminations, truncations)
+    #print("terminated is",terminations, "  and truncated is", truncations, ',  next_done is', next_done)
+    
     rewards[step] = torch.tensor(reward).to(device).view(-1)
     next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
+    #print('final  next_done is', next_done)
+    #exit()
     #print('   Before if, in main, infos:', infos)
     if "final_info" in infos:
         #print('main infos:', infos)
@@ -411,7 +419,7 @@ class Args:
     """total timesteps of the experiments"""
     learning_rate: float = 2.5e-4
     """the learning rate of the optimizer"""
-    num_envs: int = 4
+    num_envs: int = 1
     """the number of parallel game environments"""
     num_steps: int = 128
     """the number of steps to run in each environment per policy rollout"""
