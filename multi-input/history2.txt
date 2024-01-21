@@ -1,0 +1,1000 @@
+ 1144  emacs make_new_dataset.py &
+ 1145  ls
+ 1146  emacs make_new_datasetv1.py &
+ 1147  python make_new_datasetv1.py 
+ 1148  python make_new_dataset.py 
+ 1149  more processed_heart_rate_data.csv 
+ 1150  rm processed_heart_rate_data.csv 
+ 1151  python make_new_dataset.py 
+ 1152  more processed_heart_rate_data.csv 
+ 1153  rm processed_heart_rate_data.csv 
+ 1154  python make_new_dataset.py 
+ 1155  more processed_heart_rate_data.csv 
+ 1156  ls -l
+ 1157  ls -lsrt
+ 1158  rm processed_heart_rate_data.csv 
+ 1159  python make_new_dataset.py 
+ 1160  more processed_heart_rate_data.csv 
+ 1161  ls
+ 1162  wc -l processed_heart_rate_data.csv 
+ 1163  cd 
+ 1164  cd src/bah/
+ 1165  ls
+ 1166  cd heart_rate/
+ 1167  ls
+ 1168  emacs lstm.py &
+ 1169  ls
+ 1170  mv ~/data/PAMAP2_Dataset/processed_heart_rate_data.csv ./
+ 1171  ls
+ 1172  python lstm.py 
+ 1173  ls
+ 1174  emacs HR_cnn.py &
+ 1175  python lstm.py 
+ 1176  python lstm.py 
+ 1177  python cnn_1D.py 
+ 1178  emacs lstmV0.py &
+ 1179  python cnn_1D.py 
+ 1180  python lstmV0.py 
+ 1181  python lstmV2.py 
+ 1182  python lstmV3.py 
+ 1183  rm model.tflite 
+ 1184  python lstmV3.py 
+ 1185  ls
+ 1186  conda activate tf2
+ 1187  conda deactivate
+ 1188  conda create --name tf2 python==3.10
+ 1189  conda activate tf2
+ 1190  pip install --update pip
+ 1191  pip install --upgrade pip
+ 1192  pip install --upgrade setuptools
+ 1193  pip install python-dateutil
+ 1194  pip install pyparsing
+ 1195  pip install --upgrade setuptools
+ 1196  pip install --upgrade wheel
+ 1197  conda deactivate
+ 1198  cd src/bah/heart_rate/
+ 1199  ls
+ 1200  python venv .venv
+ 1201  python -m venv .venv
+ 1202  source .venv/bin/activate
+ 1203  deactivate
+ 1204  python -m venv tf2
+ 1205  source tf2/bin/activate
+ 1206  ls
+ 1207  pip install --upgrade pip
+ 1208  pip install --upgrade setuptools
+ 1209  pip install --upgrade wheel
+ 1210  pip install tensorflow
+ 1211  python tflite_lstm.py 
+ 1212  ls
+ 1213  ls -l
+ 1214  emacs \#simpleTFLite.py# 
+ 1215  rm \#simpleTFLite.py# 
+ 1216  ls -lh bak/
+ 1217  ls -lsrt bak/
+ 1218  emacs bak/from_jup_test.py &
+ 1219  python tflite_lstm.py 
+ 1220  cd bak/
+ 1221  ls
+ 1222  grep -r 'features'
+ 1223  cd ..
+ 1224  python tflite_lstm.py 
+ 1225  grep -r 'output_units'
+ 1226  cd bak/
+ 1227  grep -r 'output_units'
+ 1228  cp from_jup_test.py ../
+ 1229  cd ..
+ 1230  python from_jup_test.py 
+ 1231  emacs from_jup_test.py &
+ 1232  python from_jup_test.py 
+ 1233  cd bak/
+ 1234  ls -lsrt
+ 1235  emacs lstmV4.py &
+ 1236  ls
+ 1237  cd ..
+ 1238  python from_jup_test.py 
+ 1239  ls
+ 1240  cd bak/
+ 1241  ls
+ 1242  cd ..
+ 1243  python hr_lstm.py 
+ 1244  pip install pandas
+ 1245  python hr_lstm.py 
+ 1246  pip install -U scikit-learn
+ 1247  python hr_lstm.py 
+ 1248  ls
+ 1249  python hr_lstm.py 
+ 1250  mv from_jup_test.py bak/from_jup_testV2.py
+ 1251  cp mnist_works.py bak/
+ 1252  python hr_lstm.py 
+ 1253  python mnist_test.py 
+ 1254  python mnist_works.py 
+ 1255  emacs mnist_works.py &
+ 1256  emacs bak/lstmV3.py &
+ 1257  python hr_lstm.py 
+ 1258  ls
+ 1259  emacs mnist_test.py &
+ 1260  python mnist_test.py
+ 1261  cd bak/
+ 1262  ls -lhrt
+ 1263  python lstm.py 
+ 1264  cp ../processed_heart_rate_data.csv ./
+ 1265  python lstm.py 
+ 1266  more lstm
+ 1267  more lstm.py
+ 1268  ls -lsrt
+ 1269  more lstmV0.py
+ 1270  python lstmV0.py
+ 1271  python lstmV1.py
+ 1272  python lstmV2.py
+ 1273  ls
+ 1274  emacs lstmV2.py &
+ 1275  emacs lstmV5.py &
+ 1276  python lstmV5.py 
+ 1277  python lstmV4.py 
+ 1278  emacs lstmV4.py &
+ 1279  ls -lsrt
+ 1280  mkdir gzip 
+ 1281  mv model.tflite gzip/
+ 1282  cp processed_heart_rate_data.csv gzip/
+ 1283  cp lstmV4.py gzip/
+ 1284  mv gzip/ ../
+ 1285  cd ..
+ 1286  ls
+ 1287  tar cfvz binary_activity.tgz gzip/
+ 1288  emacs bak/lstmV4.py &
+ 1289  cd bak/
+ 1290  cd ..
+ 1291  ls
+ 1292  mkdir bak/older
+ 1293  cd bak/
+ 1294  mv *.py* older/
+ 1295  ls
+ 1296  cd ..
+ 1297  mv *.py* bak/
+ 1298  emacs bak/older/lstmV5.py &
+ 1299  ls -l bak/older/
+ 1300  ls -l
+ 1301  mv lstm_works.py bak/
+ 1302  ls
+ 1303  mv keras_lstm bak/
+ 1304  mv mnist_dense_model/ bak/
+ 1305  ls
+ 1306  mkdir models
+ 1307  mv *.h5 models/
+ 1308  ls
+ 1309  mv keras_lstm.keras models/
+ 1310  mv model.tflite models/
+ 1311  ls
+ 1312  python lstm_V6.py 
+ 1313  ls
+ 1314  more processed_heart_rate_data.csv 
+ 1315  tail processed_heart_rate_data.csv 
+ 1316  python lstm_V6.py 
+ 1317  python lstm_V7.py 
+ 1318  python lstm_v8.py 
+ 1319  python lstm_V7.py 
+ 1320  python lstm_V8.py 
+ 1321  ls
+ 1322  python cnn_v1.py 
+ 1323  cd src/bah/heart_rate/
+ 1324  ls
+ 1325  mkdir keras_lstm
+ 1326  mv keras_lstm keras_lstm.keras
+ 1327  ls keras_lstm
+ 1328  ls
+ 1329  cd keras_lstm/assets/
+ 1330  ls
+ 1331  cd ../variables/
+ 1332  ls
+ 1333  ls -l
+ 1334  ls -lh
+ 1335  cd ..
+ 1336  rm -rf assets/
+ 1337  rm -rf variables/
+ 1338  cond env list
+ 1339  conda env list
+ 1340  conda create -name jup python=3.11
+ 1341  conda create --name jup python=3.11
+ 1342  conda activate jup
+ 1343  pip install notebook
+ 1344  notebook
+ 1345  jupyter notebook
+ 1346  cd ..
+ 1347  jupyter notebook
+ 1348  conda deativate
+ 1349  deativate
+ 1350  conda deactivate
+ 1351  conda create --name tfnight python=3.10
+ 1352  conda activate tfnight
+ 1353  pip install upgrade pip
+ 1354  pip install --upgrade pip
+ 1355  pip install --upgrade setuptools
+ 1356  pip install python-dateutil
+ 1357  pip install pyparsing
+ 1358  pip install python-dateutil
+ 1359  pip install --upgrade setuptools
+ 1360  pip install --upgrade wheel
+ 1361  python mnist_test.py 
+ 1362  pip install numpy
+ 1363  python mnist_test.py 
+ 1364  pip install tf-nightly
+ 1365  python mnist_test.py 
+ 1366  python mnist_test_nightly.py 
+ 1367  cd bak/
+ 1368  python lstmV5.py 
+ 1369  pip install pandas
+ 1370  python lstmV5.py 
+ 1371  pip install -U scikit-learn
+ 1372  python lstmV5.py 
+ 1373  python lstmV4.py 
+ 1374  conda deactivate
+ 1375  ls
+ 1376  cd ..
+ 1377  cd ~/data/
+ 1378  ls
+ 1379  cd PAMAP2_Dataset/
+ 1380  ls
+ 1381  cd ..
+ 1382  mv ~/Downloads/archive.zip ./
+ 1383  ls
+ 1384  unzip archive.zip 
+ 1385  mv hrv\ dataset/ hrv_dataset
+ 1386  cd hrv_dataset/
+ 1387  ls
+ 1388  mv hrv\ dataset/ hrv_dataset
+ 1389  ls
+ 1390  more data/raw/rri/p1.txt 
+ 1391  conda activate tf2
+ 1392  cd src/
+ 1393  ls
+ 1394  cd bah/heart_rate/
+ 1395  ls
+ 1396  mkdir bak
+ 1397  mv *.py bak/
+ 1398  ls
+ 1399  mv *.py* bak/
+ 1400  history
+ 1401  cp bak/lstmV3.py ./
+ 1402  emacs lstmV3.py &
+ 1403  python lstmV3.py 
+ 1404  ls -lsrt
+ 1405  lhs -lsrt
+ 1406  ls -lsrth
+ 1407  python3 -m pip install tensorflow[and-cuda]
+ 1408  pip install tf-nightly
+ 1409  pip install ml-dtypes~=0.2.0
+ 1410  pip install ml-dtypes==0.3.1
+ 1411  python lstmV4.py 
+ 1412  python 
+ 1413  python lstmV4.py 
+ 1414  python
+ 1415  pip uninstall tensorflow tf-nightly
+ 1416  pip install tensorflow[and-cuda]
+ 1417  python lstmV4.py 
+ 1418  pip uninstall tensorflow[and-cuda]
+ 1419  pip install tensorflow
+ 1420  python lstmV4.py 
+ 1421  conda deactivate
+ 1422  conda create --name tf2 python=3.11
+ 1423  conda install conda=23.11.0
+ 1424  ls
+ 1425  conda activate tf
+ 1426  conda activate tf2
+ 1427  pip install --upgrade pip setuputils wheel
+ 1428  pip install --upgrade pip
+ 1429  pip install --upgrade setuputils
+ 1430  pip install --upgrade wheel
+ 1431  pip install tensorflow
+ 1432  ls
+ 1433  mv lstmV3.py* bak/
+ 1434  python lstmV4.py 
+ 1435  pip install pandas
+ 1436  python lstmV4.py 
+ 1437  pip install -U scikit-learn
+ 1438  python lstmV4.py 
+ 1439  conda deactivate
+ 1440  conda create --name tfnight python=3.12
+ 1441  conda activate tfnight
+ 1442  pip install upgrade pip
+ 1443  pip install --upgrade pip
+ 1444  pip install --upgrade wheel
+ 1445  pip install tf-nightly
+ 1446  emacs tflite_lstm_test.py
+ 1447  emacs tflite_lstm_test.py &
+ 1448  python tflite_lstm_test.py 
+ 1449  mv ~/Downloads/Keras_LSTM_fusion_Codelab.ipynb ./
+ 1450  pip install notebook
+ 1451  jupyter notebook
+ 1452  ls
+ 1453  pip install tf-nightly-gpu
+ 1454  conda deactivate
+ 1455  conda create --name tfnight python=3.10
+ 1456  conda activate tfnight
+ 1457  pip install --upgrade pip
+ 1458  pip install --upgrade setuptools
+ 1459  pip install pyparsing
+ 1460  pip install python-dateutil
+ 1461  pip install pyparsing
+ 1462  pip install tf-nightly-gpu
+ 1463  pip install --upgrade setuptools
+ 1464  python
+ 1465  conda deactivate
+ 1466  history
+ 1467  conda create --name tfnight python=3.11
+ 1468  conda activate tfnight
+ 1469  conda install -c conda-forge tf-nightly-gpu
+ 1470  pip install tf-nightly-gpu
+ 1471  pip install tf-nightly
+ 1472  pip install --upgrade pip
+ 1473  pip install --upgrade setuptools
+ 1474  pip install --upgrade wheel
+ 1475  pip install notebook
+ 1476  jupyter lab
+ 1477  emacs from_jup_test.py
+ 1478  emacs from_jup_test.py &
+ 1479  python from_jup_test.py 
+ 1480  mkdir keras_lstm2
+ 1481  rm -rf keras_lstm2/
+ 1482  python from_jup_test.py 
+ 1483  pip install --upgrade tensorflow
+ 1484  conda deactivate
+ 1485  history
+ 1486  conda create --name tfnight python=3.11
+ 1487  conda activate tfnight
+ 1488  pip install tf-nightly
+ 1489  conda deativate
+ 1490  ls
+ 1491  python from_jup_test.py 
+ 1492  emacs tflite_lstm.py &
+ 1493  ls
+ 1494  ls -l
+ 1495  ls
+ 1496  mv *.py* bak/
+ 1497  ls bak/
+ 1498  ls -l bak/
+ 1499  ls
+ 1500  ls *.py
+ 1501  emacs simpleTFLite.py
+ 1502  emacs simpleTFLite.py &
+ 1503  cd bak/
+ 1504  ls -lsrt
+ 1505  cp tflite_lstm.py ..'
+ 1506  cp tflite_lstm.py ..
+ 1507  cd ..
+ 1508  emacs tflite_lstm.py 
+ 1509  emacs tflite_lstm.py &
+ 1510  python from_jup_test.py 
+ 1511  cd bak/
+ 1512  grep -r '->'
+ 1513  ls -lsrt
+ 1514  more lstmV4.py
+ 1515  more lstmV3.py
+ 1516  emacs lstmV3.py &
+ 1517  conda activate tf2
+ 1518  pip install --upgrade pip 
+ 1519  pip install --upgrade setuptools
+ 1520  pip install --upgrade wheel
+ 1521  pip install tensorflow-gpu
+ 1522  python3 -m pip install tensorflow[and-cuda]
+ 1523  # Verify the installation:
+ 1524  python3 -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
+ 1525  cd src/bah/heart_rate/
+ 1526  python lstm_v8.py 
+ 1527  pip install pandas
+ 1528  pip install scikit-learn
+ 1529  python lstm_v8.py 
+ 1530  ls
+ 1531  cd gzip/
+ 1532  ls
+ 1533  rm model.tflite 
+ 1534  rm lstmV4.py 
+ 1535  cd ..
+ 1536  cp lstm_v8.py gzip/heart_rate_tflite_LSTM_cpu.py
+ 1537  cd
+ 1538  cd data/
+ 1539  ls
+ 1540  cd hrv_dataset/
+ 1541  ls
+ 1542  emacs quick_start.py &
+ 1543  python quick_start.py 
+ 1544  ls
+ 1545  emacs quick_start_v2.py & 
+ 1546  python quick_start_v2.py
+ 1547  cp quick_start_v2.py ~/src/bah/hrv/
+ 1548  ls
+ 1549  python quick_start_v2.py 
+ 1550  ls
+ 1551  mkdir bak
+ 1552  mv *.py bak/
+ 1553  python hrv_lstm_v0.py 
+ 1554  python hrv_lstm_v1.py 
+ 1555  ls
+ 1556  cd ~/src/rover_zero/
+ 1557  ls
+ 1558  rosE
+ 1559  conda deactivate
+ 1560  nividia-smi
+ 1561  nvidia-smi
+ 1562  nvidia-smi -l
+ 1563  top
+ 1564  kill 18421
+ 1565  nvidia-smi -l
+ 1566  cd src/rover_zero/
+ 1567  ls
+ 1568  ls -lsrt
+ 1569  cd rover_sim/
+ 1570  ls
+ 1571  cd ..
+ 1572  find . -name "*ppo*
+ 1573  find . -name "*ppo*"
+ 1574  ls -lsrt
+ 1575  find . -name "*ppo*.py"
+ 1576  cd multi-input/
+ 1577  ls
+ 1578  ls -lsrt
+ 1579  emacs ppo_atari.py &
+ 1580  cd ..
+ 1581  git clone https://github.com/AcutronicRobotics/gym-gazebo2.git
+ 1582  cd rover_zero/
+ 1583  ls
+ 1584  cd jax/
+ 1585  ls
+ 1586  mkdir bak
+ 1587  mv *.py bak/
+ 1588  cp ~/Downloads/ppo_atari_envpool_xla_jax.py ./
+ 1589  ls
+ 1590  emacs ppo_atari_envpool_xla_jax.py &
+ 1591  cd ..
+ 1592  ls
+ 1593  mkdir bak
+ 1594  cd rover_zero/
+ 1595  ls
+ 1596  ls -lsrt
+ 1597  cd gazebo/
+ 1598  ls
+ 1599  cd ..
+ 1600  cd multi-input/
+ 1601  ls
+ 1602  ls -lsrt
+ 1603  emacs ppo_atari_no_wrapper.py &
+ 1604  ls
+ 1605  conda env list
+ 1606  conda activate torch
+ 1607  ls
+ 1608  python ppo_atari_no_wrapper.py 
+ 1609  cd ..
+ 1610  ls
+ 1611  ls -lsrt
+ 1612  cd ..
+ 1613  ls
+ 1614  cd UCF/
+ 1615  ls
+ 1616  cd .
+ 1617  cd src
+ 1618  ls
+ 1619  cd ..
+ 1620  ls
+ 1621  ls bak/
+ 1622  cd src/rover_zero/
+ 1623  ls -lsrt
+ 1624  cd ..
+ 1625  ls -lsrt
+ 1626  cd ant/
+ 1627  ls
+ 1628  ls -lsrt
+ 1629  emacs jack_ant.py &
+ 1630  cd ../rover_zero/
+ 1631  python EEL_ant.py 
+ 1632  pip install gymnasium
+ 1633  python EEL_ant.py 
+ 1634  conda env list
+ 1635  conda deactivate
+ 1636  conda activate mujoco
+ 1637  python EEL_ant.py 
+ 1638  cd ~/miniconda3/envs/
+ 1639  ls -lsrt
+ 1640  conda activate sb3
+ 1641  cd
+ 1642  cd src/rover_zero/
+ 1643  cd ..
+ 1644  ls
+ 1645  ls -l
+ 1646  mv rover_zero/ rover
+ 1647  cd rover
+ 1648  ls
+ 1649  python EEL_ant.py 
+ 1650  history > temp_history.txt
+ 1651  emacs temp_history.txt &
+ 1652  conda deactivate
+ 1653  conda activate sb3_2
+ 1654  python EEL_ant.py 
+ 1655  conda deactivate
+ 1656  conda activate sb2
+ 1657  conda deactivate
+ 1658  conda activate sb3
+ 1659  python EEL_ant.py 
+ 1660  conda deactivate
+ 1661  conda activate sb3_2
+ 1662  ls
+ 1663  python EEL_ant.py 
+ 1664  conda deactivate
+ 1665  conda activate sb3
+ 1666  ls
+ 1667  ls -lsrt
+ 1668  cd multi-input/
+ 1669  ls
+ 1670  emacs ppo_atari_no_wrapper.py &
+ 1671  ls
+ 1672  mv ppo_atari.py bak/
+ 1673  mv ~/Downloads/ppo_atari.py ./
+ 1674  ls
+ 1675  conda deactivate
+ 1676  conda activate torch
+ 1677  cond deactivate
+ 1678  conds deactivate
+ 1679  conda deactivate
+ 1680  conda env list
+ 1681  conda create --name rover --clone torch
+ 1682  conda activate rover
+ 1683  emacs ppo_atari.py &
+ 1684  python ppo_atari.py 
+ 1685  pip install tyro
+ 1686  pip install --upgrade pip
+ 1687  pip install --upgrade setuptools
+ 1688  pip install --upgrade wheel
+ 1689  python ppo_atari.py 
+ 1690  ls
+ 1691  mv ppo_atari_no_* bak/
+ 1692  ls
+ 1693  mv ppo_continuous_action.py~ bak/
+ 1694  ls
+ 1695  rm \#single_ppo_atari.py# 
+ 1696  rm single_ppo_atari.py 
+ 1697  emacs ppo_atari.py &
+ 1698  python single_ppo_atari.py 
+ 1699  ls -lsrt
+ 1700  python single_ppo_atari.py 
+ 1701  rm single_ppo_atari.py*
+ 1702  emacs ppo_atari.py &
+ 1703  python single_ppo_atari.py 
+ 1704  python single_ppo_atari.py --total_timesteps=1000
+ 1705  python single_ppo_atari_v1.py --total_timesteps=1000
+ 1706  python single_ppo_atari_v1.py --total_timesteps=10000
+ 1707  python single_ppo_atari_v1.py --total_timesteps=100000
+ 1708  python single_ppo_atari_v2.py --total_timesteps=100000
+ 1709  python ppo_atari.py --total_timesteps=100000
+ 1710  emacs ppo_atari.py &
+ 1711  python ppo_atari.py --total_timesteps=100000
+ 1712  python single_ppo_atari_v2.py --total_timesteps=100000
+ 1713  python single_ppo_atari_v3.py --total_timesteps=100000
+ 1714  cd ~/data/hrv_dataset/
+ 1715  ls
+ 1716  cp hrv_lstm_v1.py hrv_lstm_v1.txt
+ 1717  cd ..
+ 1718  cd
+ 1719  cd src/
+ 1720  ls
+ 1721  cd bah/
+ 1722  ls
+ 1723  cd heart_rate/
+ 1724  ls
+ 1725  ls -lsrt
+ 1726  mv LSTM_HR_activity_01_02_23_cpu.tflite LSTM_HR_activity_01_02_23_flex.tflite 
+ 1727  mv lstm_v8.py lstm.txt
+ 1728  more lstm.txt 
+ 1729  ls
+ 1730  cd src/bah/hrv/
+ 1731  ls
+ 1732  ls -lsrt
+ 1733  conda activate tf2
+ 1734  python lstm_hrv_v0.py 
+ 1735  cd ../../rover
+ 1736  ls
+ 1737  emacs temp_history.txt &
+ 1738  cd ~/data/hrv_dataset/
+ 1739  ls
+ 1740  ls -lsrt
+ 1741  rm LSTM_HR_activity_Dec_31.tflite 
+ 1742  emacs hrv_lstm_v1.py &
+ 1743  python hrv_lstm_v1.py 
+ 1744  rm LSTM_HRV_stress_01-02-24.tflite 
+ 1745  python hrv_lstm_v1.py 
+ 1746  rm LSTM_HRV_stress_01-02-24.tflite 
+ 1747  python hrv_lstm_v1.py 
+ 1748  ls
+ 1749  python hrv_lstm_v1.py 
+ 1750  ls
+ 1751  ls ~/src/bah/heart_rate/
+ 1752  cd ~/src/rover
+ 1753  ls
+ 1754  cd multi-input/
+ 1755  ls -lsrt
+ 1756  cd ~/src/bah/heart_rate/
+ 1757  cd ~/data/PAMAP2_Dataset/
+ 1758  ls
+ 1759  ls -lsrt
+ 1760  python make_new_dataset.py 
+ 1761  rm processed_heart_rate_data.csv 
+ 1762  emacs make_new_dataset.py &
+ 1763  python make_new_dataset.py 
+ 1764  ls -lsrt
+ 1765  python make_new_dataset_3_class.py 
+ 1766  ls
+ 1767  cp processed_heart_rate_3_class.csv ~/src/bah/heart_rate/
+ 1768  cd ~/src/bah/heart_rate/
+ 1769  ls
+ 1770  pip install tflite-runtime
+ 1771  pip install tensorflow-gpu
+ 1772  conda deactivate
+ 1773  conda create -name tf2 python=3.9
+ 1774  conda create --name tf2 python=3.9
+ 1775  conda activate tf2
+ 1776  pip install tensorflow-gpu
+ 1777  conda deactivate
+ 1778  conda create --name tf2 python==3.8
+ 1779  conda activate tf2
+ 1780  pip install --upgrade pip
+ 1781  pip install --upgrade setuptools
+ 1782  pip install --upgrade wheel
+ 1783  pip install tensorflow-gpu
+ 1784  python
+ 1785  pip install tensorflow-gpu
+ 1786  conda deactivate
+ 1787  conda create --name tf2 python==3.10
+ 1788  conda activate tf2
+ 1789  pip install --upgrade pip setuptools wheel
+ 1790  pip install python-dateutil
+ 1791  pip install pyparsing
+ 1792  pip install python-dateutil
+ 1793  pip install tensorflow
+ 1794  pip install tflite-runtime
+ 1795  ls
+ 1796  mv *.py* bak/
+ 1797  cd bak/
+ 1798  cp lstm_v8.py~ ../lstm_3_class.py
+ 1799  cd ..
+ 1800  emacs lstm_3_class.py &
+ 1801  pip install pandas
+ 1802  pip install scikit-learn
+ 1803  python lstm_3_class.py 
+ 1804  ls -lsrt bak/
+ 1805  emacs bak/lstm_gpu_v0.py &
+ 1806  python lstm_HR_3-class.py 
+ 1807  ls
+ 1808  python lstm_HR_3-class.py 
+ 1809  mv lstm_HR_3-class_v2.py\  lstm_HR_3-class_v2.py
+ 1810  emacs lstm_HR_3-class_v2.py 
+ 1811  emacs lstm_HR_3-class_v2.py &
+ 1812  python lstm_HR_3-class.py 
+ 1813  pip install tflite-runtime
+ 1814  ls -lsrt
+ 1815  python lstm_HR_3-class_v2.py &
+ 1816  emacs lstm_HR_3-class_v2.py &
+ 1817  python lstm_HR_3-class_v2.py
+ 1818  ls -lsrt
+ 1819  mv LSTM_HR_activity_01_02_23_cpu.tflite LSTM_HR_activity_3-Class_01-04-24.tflite
+ 1820  cp lstm_HR_3-class_v2.py lstm_HR_3-class.txt
+ 1821  cd ..
+ 1822  ls
+ 1823  cd ..
+ 1824  ls
+ 1825  cd ant/
+ 1826  ls
+ 1827  more ~/.bashrc
+ 1828  cd data
+ 1829  ls
+ 1830  cd PAMAP2_Dataset/
+ 1831  ls
+ 1832  mv *.py* jmv/
+ 1833  cd jmv/
+ 1834  ls
+ 1835  ls -lsrt
+ 1836  cp make_new_dataset_3_class.py ..
+ 1837  cd ..
+ 1838  ls
+ 1839  emacs make_new_dataset_3_class.py &
+ 1840  python make_new_dataset_3_class_v2.py 
+ 1841  conda activate tf
+ 1842  conda activate tf2
+ 1843  python make_new_dataset_3_class_v2.py 
+ 1844  cp processed_heart_rate_3_class_v2.csv ~/src/bah/heart_rate/
+ 1845  ls -lsrt
+ 1846  cp make_new_dataset_3_class_v2.py make_new_dataset_3_class.txt
+ 1847  cd src/ant/
+ 1848  ls
+ 1849  ls -lsrt
+ 1850  more jack_ant.py
+ 1851  ls
+ 1852  ls terrain/
+ 1853  ls bak/
+ 1854  cp jack_ant.py multi_input_and_resolutions.txt
+ 1855  emacs jack_ant.py &
+ 1856  more ../bah/heart_rate/lstm.txt 
+ 1857  cd src/
+ 1858  ls -lsrt
+ 1859  conda activate rover
+ 1860  cd src/rover/multi-input/
+ 1861  ls
+ 1862  python ppo_origin.py 
+ 1863  ls -l
+ 1864  rm multi_input_ppo_before.py*
+ 1865  rm multi_input_ppo.py*
+ 1866  rm ppo_multi_input.py~ 
+ 1867  emacs ppo_origin.py &
+ 1868  python multi_input_ppo.py 
+ 1869  emacs multi_input_ppo.py &
+ 1870  python multi_input_ppo.py 
+ 1871  emacs ppo_origin.py &
+ 1872  python multi_input_ppo.py 
+ 1873  python multi_input_ppo_v2.py 
+ 1874  python multi_input_ppo_v3.py 
+ 1875  emacs ppo_origin.py &
+ 1876  python multi_input_ppo_v3.py 
+ 1877  ls
+ 1878  cd runs/
+ 1879  ls
+ 1880  du -sh *
+ 1881  cd ..
+ 1882  rm -rf runs/
+ 1883  mkdir runs
+ 1884  python multi_input_ppo_v3.py 
+ 1885  python ppo_origin.py 
+ 1886  cd runs/
+ 1887  ls
+ 1888  cd CartPole-v1__multi_input_ppo_v3__1__1704672416/
+ 1889  cd ..
+ 1890  ls -l CartPole-v1__multi_input_ppo_v3__1__1704672416/
+ 1891  ls -l CartPole-v1__ppo_origin__1__1704672464/
+ 1892  cd ..
+ 1893  ls
+ 1894  mv multi_input_ppo* bak/
+ 1895  python multi_input_ppo_v4.py 
+ 1896  python ppo_origin.py 
+ 1897  python multi_input_ppo_v4.py 
+ 1898  sudo apt install cmake g++ python3-pip wget git
+ 1899  python multi_input_ppo_v4.py 
+ 1900  cd src
+ 1901  cd rover
+ 1902  ls
+ 1903  ls -lsrt
+ 1904  cd multi-input/
+ 1905  ls
+ 1906  emacs ~/src/ant/ant.py &
+ 1907  cd ..
+ 1908  ls
+ 1909  rm -rf cleanrl/
+ 1910  git clone https://github.com/vwxyzjn/cleanrl.git
+ 1911  cd rover
+ 1912  find . -name "*single*.py"
+ 1913  cd multi-input/
+ 1914  ls
+ 1915  history
+ 1916  ls
+ 1917  conda activate torch
+ 1918  ls
+ 1919  ls -lsrt
+ 1920  python single_ppo_atari_v3.py 
+ 1921  ls -lsrt ~/miniconda3/envs/
+ 1922  conda deactivate
+ 1923  conda activate rover
+ 1924  python single_ppo_atari_v3.py 
+ 1925  ls bak/
+ 1926  ls
+ 1927  mv single_ppo_atari* bak/
+ 1928  ls
+ 1929  cp bak/single_ppo_atari_v3.py ./
+ 1930  ls
+ 1931  emacs single_ppo_atari_v3.py &
+ 1932  mv single_ppo_atari_v3.py bak/
+ 1933  ls
+ 1934  cp ~/src/cleanrl/cleanrl/ppo.py ./
+ 1935  ls
+ 1936  python ppo.py 
+ 1937  ls
+ 1938  cp ppo.py bak/ppo_origin.py
+ 1939  mv ppo.py ppo_multi_input.py
+ 1940  emacs ppo_multi_input.py &
+ 1941  python ppo_multi_input.py 
+ 1942  rm ppo_multi_input.py
+ 1943  ls
+ 1944  rm ppo_multi_input.py~ 
+ 1945  cp bak/ppo_origin.py ./ppo_multi_input.py 
+ 1946  emacs ppo_multi_input.py &
+ 1947  cp bak/ppo_origin.py ./
+ 1948  rm ppo_multi_input.py
+ 1949  python multi_input_ppo.py 
+ 1950  rm multi_input_ppo.py
+ 1951  emacs ppo_origin.py &
+ 1952  python ppo_origin.py 
+ 1953  python multi_input_ppo_v3.py 
+ 1954  python ppo_origin.py 
+ 1955  nvidia-smi
+ 1956  nvidia-smi -l
+ 1957  history
+ 1958  cd src/
+ 1959  cd rover
+ 1960  ls
+ 1961  ls -lsrt
+ 1962  cd multi-input/
+ 1963  ls
+ 1964  ls -lsrt
+ 1965  ls bak/
+ 1966  mv ppo_atari.py* bak/
+ 1967  ls
+ 1968  emacs multi_input_ppo_v4.py &
+ 1969  conda activate rover
+ 1970  ls
+ 1971  python multi_input_ppo_v4.py 
+ 1972  python ppo_origin.py 
+ 1973  python multi_input_ppo_v4.py 
+ 1974  python multi_input_ppo_v5.py 
+ 1975  nvidia-smi
+ 1976  youtube-dl https://www.youtube.com/watch?v=kbnY7D_BXrY&t=5s
+ 1977  sudo apt get youtube-dl
+ 1978  sudo apt-get youtube-dl
+ 1979  sudo apt-get install youtube-dl
+ 1980  emacs src/notes/jack_notes.txt &
+ 1981  ls
+ 1982  cd src/bah/
+ 1983  ls
+ 1984  cd heart_rate/
+ 1985  ls
+ 1986  ls -lsrt
+ 1987  emacs lstm_HR_3-class_v2.py &
+ 1988  more lstm_HR_3-class.txt 
+ 1989  ls -lsrt
+ 1990  emacs LSTM_HR_activity_3-Class_01-04-24.tflite &
+ 1991  emacs lstm_HR_3-class_v2.py
+ 1992  emacs lstm_HR_3-class_v2.py &
+ 1993  conda activate tf2
+ 1994  python lstm_HR_3-class_v2.py 
+ 1995  conda env list
+ 1996  cd src/rover
+ 1997  ls
+ 1998  cd multi-input/
+ 1999  ls
+ 2000  ls -lsrt
+ 2001  emacs multi_input_ppo_v5.py &
+ 2002  conda activate rover
+ 2003  python multi_input_ppo_v5.py 
+ 2004  python multi_input_ppo.py 
+ 2005  cd ..
+ 2006  ls
+ 2007  ls -lsrt
+ 2008  emacs EEL_ant.py &
+ 2009  python multi_input_ppo.py --env_id="LunarLander-v2"
+ 2010  cd multi-input/
+ 2011  python multi_input_ppo.py --env_id="LunarLander-v2"
+ 2012  pip install upgrade pip
+ 2013  pip install --upgrade pip
+ 2014  python multi_input_ppo.py --env_id="LunarLander-v2"
+ 2015  pip install gymnasium[box2d]
+ 2016  python multi_input_ppo.py --env_id="LunarLander-v2"
+ 2017  python multi_input_ppo_NoVec.py 
+ 2018  cd ..
+ 2019  pushup
+ 2020  cd multi-input/
+ 2021  ls
+ 2022  ls -lsrt
+ 2023  rm '#multi_input_ppo.py#' 
+ 2024  emacs ppo_origin.py &
+ 2025  python multi_input_ppo_NoVec.py 
+ 2026  ls
+ 2027  ls -l
+ 2028  rm '#ppo_origin.py#' 
+ 2029  emacs multi_input_ppo.py &
+ 2030  python multi_input_ppo_NoVec.py 
+ 2031  ls
+ 2032  emacs ppo_origin.py &
+ 2033  cp multi_input_ppo_NoVec.py bak/multi_input_ppo_NoVec_v1.py
+ 2034  python multi_input_ppo_NoVec.py 
+ 2035  cd runs/
+ 2036  ls
+ 2037  ls -lsrt
+ 2038  cd CartPole-v1__multi_input_ppo_NoVec__1__1705261966/
+ 2039  ls
+ 2040  more events.out.tfevents.1705261966.HAL.39405.0 
+ 2041  cd ..
+ 2042  python multi_input_ppo_NoVec.py 
+ 2043  cd ..
+ 2044  cd multi-input/
+ 2045  rm -rf runs/
+ 2046  mkdir runs
+ 2047  cd ..
+ 2048  pushup
+ 2049  cd multi-input/
+ 2050  ls
+ 2051  python multi_input_ppo_NoVec.py 
+ 2052  ls
+ 2053  mv *.py* bak/
+ 2054  ls
+ 2055  cp ~/src/cleanrl/cleanrl/ppo_continuous_action.py ./
+ 2056  emacs ppo_continuous_action.py &
+ 2057  ls
+ 2058  python multi_input_ppo_continuous.py 
+ 2059  python ppo_continuous_action.py 
+ 2060  pip install mujoco
+ 2061  python ppo_continuous_action.py 
+ 2062  emacs ppo_continuous_action.py &
+ 2063  python
+ 2064  ls
+ 2065  conda deactivate
+ 2066  conda env list
+ 2067  conda activate torch
+ 2068  python
+ 2069  conda activate rosgym
+ 2070  python
+ 2071  ls
+ 2072  python
+ 2073  pip install --upgrade pip setuptools
+ 2074  pip install pyparsing
+ 2075  pip install python-dateutil
+ 2076  pip install pyparsing
+ 2077  pip install --upgrade pip setuptools
+ 2078  pip install --upgrade wheel
+ 2079  pip install mujoco
+ 2080  python
+ 2081  cd ..
+ 2082  grep -r "import gym"
+ 2083  whereis zsh
+ 2084  zsh
+ 2085  sudo apt install zsh
+ 2086  zsh
+ 2087  cd gym_rover/envs/
+ 2088  ls
+ 2089  ls -lsrt
+ 2090  mv roverZero_env.py~ roverZero_env2.py
+ 2091  cd ..
+ 2092  ls
+ 2093  cd ..
+ 2094  cd misc/
+ 2095  ls -lsrt
+ 2096  emacs ppo_rover.py &
+ 2097  cd ..
+ 2098  ls
+ 2099  cd multi-input/
+ 2100  ls
+ 2101  emacs ppo_continuous_action.py 
+ 2102  emacs ppo_continuous_action.py &
+ 2103  pip install gym[mujoco]
+ 2104  ls
+ 2105  mv ppo_continuous_action.py bak/
+ 2106  rm -rf runs/
+ 2107  python ppo_continuous_action_gym.py 
+ 2108  pip install tyro
+ 2109  python ppo_continuous_action_gym.py 
+ 2110  pip install tensorboard
+ 2111  python ppo_continuous_action_gym.py 
+ 2112  ls
+ 2113  ls -lsrt
+ 2114  emacs multi_input_ppo_continuous.py &
+ 2115  python multi_input_ppo_continuous.py 
+ 2116  ls
+ 2117  ls -l
+ 2118  emacs ppo_continuous_action_gym.py 
+ 2119  emacs ppo_continuous_action_gym.py &
+ 2120  python multi_input_ppo_continuous.py 
+ 2121  python ppo_continuous_action_gym.py 
+ 2122  cp -r ~/src/cleanrl/cleanrl_utils ./
+ 2123  ls
+ 2124  python ppo_continuous_action_gym.py 
+ 2125  python multi_input_ppo_continuous.py 
+ 2126  cp multi_input_ppo_continuous.py bak/multi_input_ppo_continous_v1.py
+ 2127  python multi_input_ppo_continuous.py 
+ 2128  python
+ 2129  pip install --upgrade gym
+ 2130  mv ~/Downloads/pixel_observation.py ./
+ 2131  python multi_input_ppo_continuous.py 
+ 2132  emacs pixel_observation.py &
+ 2133  python multi_input_ppo_continuous.py 
+ 2134  cd ..
+ 2135  cd multi-input/
+ 2136  python multi_input_ppo_continuous.py 
+ 2137  pip install matplotlib
+ 2138  python multi_input_ppo_continuous.py 
+ 2139  python functional_ppo_discrete.py 
+ 2140  python ppo_continuous_action_gym.py 
+ 2141  cp multi_input_ppo_continuous.py bak/multi_input_ppo_continous_v2.py 
+ 2142  python multi_input_ppo_continuous.py 
+ 2143  history > history2.txt
