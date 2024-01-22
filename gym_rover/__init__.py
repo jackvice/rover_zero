@@ -1,10 +1,19 @@
 from gym.envs.registration import register
 
 
+max_env_size = 3
+register(
+    id='TurtleBot3_Circuit_Simple_Continuous-v0',
+    entry_point='gym_turtlebot3.envs:TurtleBot3Env',
+    kwargs={'goal_list': goal_list, 'max_env_size': max_env_size, 'continuous': True}
+)
+
+"""
 register(
     id='RoverZero-v0',
     entry_point='gym_rover.envs:RoverZeroEnv'
 )
+"""
 
 goal_list = [   [-5.0, 3.000]]
 #                [1.005, 2.505],
