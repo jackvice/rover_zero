@@ -18,71 +18,6 @@ from torch.utils.tensorboard import SummaryWriter
 ROVER = True
 #ROVER = False
 
-def parse_args():
-    # fmt: off
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--exp-name", type=str, default=os.path.basename(__file__).rstrip(".py"),
-        help="the name of this experiment")
-    parser.add_argument("--seed", type=int, default=1,
-        help="seed of the experiment")
-    parser.add_argument("--torch-deterministic", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-        help="if toggled, `torch.backends.cudnn.deterministic=False`")
-    parser.add_argument("--cuda", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-        help="if toggled, cuda will be enabled by default")
-    parser.add_argument("--track", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
-        help="if toggled, this experiment will be tracked with Weights and Biases")
-    parser.add_argument("--wandb-project-name", type=str, default="cleanRL",
-        help="the wandb's project name")
-    parser.add_argument("--wandb-entity", type=str, default=None,
-        help="the entity (team) of wandb's project")
-    parser.add_argument("--capture-video", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
-        help="whether to capture videos of the agent performances (check out `videos` folder)")
-
-    # Algorithm specific arguments
-    if ROVER:
-        parser.add_argument("--env-id", type=str, default="RoverZero-v0",
-                            help="the id of the environment")
-    else:
-        parser.add_argument("--env-id", type=str, default="LunarLanderContinuous-v2",
-                            help="the id of the environment")
-    parser.add_argument("--total-timesteps", type=int, default=1000000,
-        help="total timesteps of the experiments")
-    parser.add_argument("--learning-rate", type=float, default=3e-4,
-        help="the learning rate of the optimizer")
-    parser.add_argument("--num-envs", type=int, default=1,
-        help="the number of parallel game environments")
-    parser.add_argument("--num-steps", type=int, default=2048,
-        help="the number of steps to run in each environment per policy rollout")
-    parser.add_argument("--anneal-lr", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-        help="Toggle learning rate annealing for policy and value networks")
-    parser.add_argument("--gamma", type=float, default=0.99,
-        help="the discount factor gamma")
-    parser.add_argument("--gae-lambda", type=float, default=0.95,
-        help="the lambda for the general advantage estimation")
-    parser.add_argument("--num-minibatches", type=int, default=32,
-        help="the number of mini-batches")
-    parser.add_argument("--update-epochs", type=int, default=10,
-        help="the K epochs to update the policy")
-    parser.add_argument("--norm-adv", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-        help="Toggles advantages normalization")
-    parser.add_argument("--clip-coef", type=float, default=0.2,
-        help="the surrogate clipping coefficient")
-    parser.add_argument("--clip-vloss", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-        help="Toggles whether or not to use a clipped loss for the value function, as per the paper.")
-    parser.add_argument("--ent-coef", type=float, default=0.0,
-        help="coefficient of the entropy")
-    parser.add_argument("--vf-coef", type=float, default=0.5,
-        help="coefficient of the value function")
-    parser.add_argument("--max-grad-norm", type=float, default=0.5,
-        help="the maximum norm for the gradient clipping")
-    parser.add_argument("--target-kl", type=float, default=None,
-        help="the target KL divergence threshold")
-    args = parser.parse_args()
-    args.batch_size = int(args.num_envs * args.num_steps)
-    args.minibatch_size = int(args.batch_size // args.num_minibatches)
-    # fmt: on
-    return args
-
 
 def make_env(env_id, idx, capture_video, run_name, gamma):
     def thunk():
@@ -143,7 +78,7 @@ class Agent(nn.Module):
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
 
 
-if __name__ == "__main__":
+def rover_main():
     args = parse_args()
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
     if args.track:
@@ -177,12 +112,12 @@ if __name__ == "__main__":
         [make_env(args.env_id, i, args.capture_video, run_name, args.gamma) for i in range(args.num_envs)]
     )
     #envs = gym.vector.SyncVectorEnv( make_env(args.env_id, 0, args.capture_video, run_name, args.gamma ) )
-    
+    print("1.5")
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
     agent = Agent(envs).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
-
+    print("1.6")
     # ALGO Logic: Storage setup
     obs = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(device)
     actions = torch.zeros((args.num_steps, args.num_envs) + envs.single_action_space.shape).to(device)
@@ -195,6 +130,7 @@ if __name__ == "__main__":
     global_step = 0
     start_time = time.time()
     next_obs, _ = envs.reset()
+    
     print("obs", next_obs)
     next_obs = torch.Tensor(next_obs).to(device)
     next_done = torch.zeros(args.num_envs).to(device)
@@ -335,3 +271,72 @@ if __name__ == "__main__":
 
     envs.close()
     writer.close()
+
+
+def parse_args():
+    # fmt: off
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--exp-name", type=str, default=os.path.basename(__file__).rstrip(".py"),
+        help="the name of this experiment")
+    parser.add_argument("--seed", type=int, default=1,
+        help="seed of the experiment")
+    parser.add_argument("--torch-deterministic", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
+        help="if toggled, `torch.backends.cudnn.deterministic=False`")
+    parser.add_argument("--cuda", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
+        help="if toggled, cuda will be enabled by default")
+    parser.add_argument("--track", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
+        help="if toggled, this experiment will be tracked with Weights and Biases")
+    parser.add_argument("--wandb-project-name", type=str, default="cleanRL",
+        help="the wandb's project name")
+    parser.add_argument("--wandb-entity", type=str, default=None,
+        help="the entity (team) of wandb's project")
+    parser.add_argument("--capture-video", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
+        help="whether to capture videos of the agent performances (check out `videos` folder)")
+
+    # Algorithm specific arguments
+    if ROVER:
+        parser.add_argument("--env-id", type=str, default="TurtleBot3_Circuit_Simple_Continuous-v0", #""RoverZero-v0",
+                            help="the id of the environment")
+    else:
+        parser.add_argument("--env-id", type=str, default="LunarLanderContinuous-v2",
+                            help="the id of the environment")
+    parser.add_argument("--total-timesteps", type=int, default=1000000,
+        help="total timesteps of the experiments")
+    parser.add_argument("--learning-rate", type=float, default=3e-4,
+        help="the learning rate of the optimizer")
+    parser.add_argument("--num-envs", type=int, default=1,
+        help="the number of parallel game environments")
+    parser.add_argument("--num-steps", type=int, default=2048,
+        help="the number of steps to run in each environment per policy rollout")
+    parser.add_argument("--anneal-lr", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
+        help="Toggle learning rate annealing for policy and value networks")
+    parser.add_argument("--gamma", type=float, default=0.99,
+        help="the discount factor gamma")
+    parser.add_argument("--gae-lambda", type=float, default=0.95,
+        help="the lambda for the general advantage estimation")
+    parser.add_argument("--num-minibatches", type=int, default=32,
+        help="the number of mini-batches")
+    parser.add_argument("--update-epochs", type=int, default=10,
+        help="the K epochs to update the policy")
+    parser.add_argument("--norm-adv", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
+        help="Toggles advantages normalization")
+    parser.add_argument("--clip-coef", type=float, default=0.2,
+        help="the surrogate clipping coefficient")
+    parser.add_argument("--clip-vloss", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
+        help="Toggles whether or not to use a clipped loss for the value function, as per the paper.")
+    parser.add_argument("--ent-coef", type=float, default=0.0,
+        help="coefficient of the entropy")
+    parser.add_argument("--vf-coef", type=float, default=0.5,
+        help="coefficient of the value function")
+    parser.add_argument("--max-grad-norm", type=float, default=0.5,
+        help="the maximum norm for the gradient clipping")
+    parser.add_argument("--target-kl", type=float, default=None,
+        help="the target KL divergence threshold")
+    args = parser.parse_args()
+    args.batch_size = int(args.num_envs * args.num_steps)
+    args.minibatch_size = int(args.batch_size // args.num_minibatches)
+    # fmt: on
+    return args
+
+if __name__ == "__main__":
+    rover_main()

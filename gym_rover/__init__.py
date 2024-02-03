@@ -1,4 +1,26 @@
 from gym.envs.registration import register
+goal_list = [   [-5.0, 3.000]]
+
+
+
+#register(
+#    id='RoverZero-v0',
+#    entry_point='gym_rover.envs:RoverZeroEnv'
+#)
+
+
+#max_env_size = 3
+#register(
+#    id='RoverZero_Point_Simple-v0',
+#    entry_point='gym_turtlebot3.envs:TurtleBot3Env',
+#    kwargs={'goal_list': goal_list, 'max_env_size': max_env_size}
+#)
+
+
+
+"""
+
+
 
 
 max_env_size = 3
@@ -9,11 +31,9 @@ register(
 )
 
 """
-register(
-    id='RoverZero-v0',
-    entry_point='gym_rover.envs:RoverZeroEnv'
-)
-"""
+
+
+
 
 goal_list = [   [-5.0, 3.000]]
 #                [1.005, 2.505],
@@ -26,21 +46,16 @@ goal_list = [   [-5.0, 3.000]]
 
 
 
-"""
-max_env_size = 3
-register(
-    id='RoverZero_Point_Simple-v0',
-    entry_point='gym_turtlebot3.envs:TurtleBot3Env',
-    kwargs={'goal_list': goal_list, 'max_env_size': max_env_size}
-)
 
+
+max_env_size = 3
 register(
     id='TurtleBot3_Circuit_Simple_Continuous-v0',
     entry_point='gym_turtlebot3.envs:TurtleBot3Env',
     kwargs={'goal_list': goal_list, 'max_env_size': max_env_size, 'continuous': True}
 )
 
-
+"""
 
 goal_list = [   [0.505, 4.005],
                 [1.005, 4.505],
