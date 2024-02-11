@@ -21,8 +21,6 @@ from torch.utils.tensorboard import SummaryWriter
 ROVER = True
 #ROVER = False
 
-OBS_OLD = 17
-
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
@@ -32,24 +30,22 @@ class Agent(nn.Module):
     def __init__(self, envs):
         super().__init__()
         self.critic = nn.Sequential(
-            layer_init(nn.Linear(np.array(envs.observation_space.shape).prod(), 64)),
-            #layer_init(nn.Linear(np.array((OBS_OLD,)).prod(), 64)),
+            #layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 64)),
+            layer_init(nn.Linear(np.array((17,)).prod(), 64)),
             nn.Tanh(),
             layer_init(nn.Linear(64, 64)),
             nn.Tanh(),
             layer_init(nn.Linear(64, 1), std=1.0),
         )
         self.actor_mean = nn.Sequential(
-            layer_init(nn.Linear(np.array(envs.observation_space.shape).prod(), 64)),
-            #layer_init(nn.Linear(np.array((OBS_OLD,)).prod(), 64)),
+            #layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 64)),
+            layer_init(nn.Linear(np.array((17,)).prod(), 64)),
             nn.Tanh(),
             layer_init(nn.Linear(64, 64)),
             nn.Tanh(),
-            layer_init(nn.Linear(64, np.prod(envs.action_space.shape)), std=0.01),
+            layer_init(nn.Linear(64, np.prod(envs.single_action_space.shape)), std=0.01),
         )
-        #self.actor_logstd = nn.Parameter(torch.zeros(1, np.prod(envs.action_space.shape)))
-        self.actor_logstd = nn.Parameter(torch.zeros(1))
-
+        self.actor_logstd = nn.Parameter(torch.zeros(1, np.prod(envs.single_action_space.shape)))
 
     def get_value(self, x):
         return self.critic(x)
@@ -61,10 +57,7 @@ class Agent(nn.Module):
         probs = Normal(action_mean, action_std)
         if action is None:
             action = probs.sample()
-        #return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
-        return action, probs.log_prob(action), probs.entropy(), self.critic(x)
-
-
+        return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
 
 
 def rover_main():
@@ -76,7 +69,7 @@ def rover_main():
     #envs = gym.vector.SyncVectorEnv(
     #    [make_env(args.env_id, i, args.capture_video, run_name, args.gamma) for i in range(args.num_envs)]
     #)
-    envs = make_env(args.env_id, args.capture_video, run_name, args.gamma)
+    envs = make_env(args.env_id, 0, args.capture_video, run_name, args.gamma)
     
     print("environment made")
     assert isinstance(envs.action_space, gym.spaces.Box), \
@@ -101,7 +94,6 @@ def rover_main():
             optimizer.param_groups[0]["lr"] = lrnow
 
         for step in range(0, args.num_steps):
-            #print('step num', step)
             global_step += args.num_envs
             obs[step] = next_obs
             dones[step] = next_done
@@ -182,22 +174,23 @@ def rover_main():
     writer.close()
     rclpy.shutdown()
 
-def make_env(env_id, capture_video, run_name, gamma):
+def make_env(env_id, idx, capture_video, run_name, gamma):
+
     env = gym.make('TurtleBot3_Circuit_Simple_Continuous-v0') 
-    if capture_video:
+    if capture_video and idx == 0:
         env = gym.make(env_id)
         #env = gym.make(env_id, render_mode="rgb_array")
         #env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
     else:
-        env = gym.make(env_id)
-        env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
-        env = gym.wrappers.RecordEpisodeStatistics(env)
-        env = gym.wrappers.ClipAction(env)
-        env = gym.wrappers.NormalizeObservation(env)
-        env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
-        env = gym.wrappers.NormalizeReward(env, gamma=gamma)
-        env = gym.wrappers.TransformReward(env, lambda reward: np.clip(reward, -10, 10))
-        #env = PixelObservationWrapper(env, pixels_only=False)
+    env = gym.make(env_id)
+    env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
+    env = gym.wrappers.RecordEpisodeStatistics(env)
+    env = gym.wrappers.ClipAction(env)
+    env = gym.wrappers.NormalizeObservation(env)
+    env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
+    env = gym.wrappers.NormalizeReward(env, gamma=gamma)
+    env = gym.wrappers.TransformReward(env, lambda reward: np.clip(reward, -10, 10))
+    #env = PixelObservationWrapper(env, pixels_only=False)
     return env
 
     
@@ -239,8 +232,8 @@ def initialize_env(args, envs, device):
     # TRY NOT TO MODIFY: start the game
     global_step = 0
     start_time = time.time()
-    next_obs, _ = envs.reset()# seed=args.seed)
-    next_obs = torch.Tensor(next_obs).to(device)
+    next_obs, _ = envs.reset(seed=args.seed)
+    next_obs = torch.Tensor(next_obs['state']).to(device)
     next_done = torch.zeros(args.num_envs).to(device)
     
     return next_obs, next_done, global_step, start_time
@@ -248,13 +241,11 @@ def initialize_env(args, envs, device):
 
 def take_step(step, envs, action, device, rewards, global_step, writer):
     # TRY NOT TO MODIFY: execute the game and log data.
-    next_obs, reward, next_done, infos = envs.step(action.cpu().numpy())
-    #next_done = np.logical_or(terminations, truncations)
+    next_obs, reward, terminations, truncations, infos = envs.step(action.cpu().numpy())
+    next_done = np.logical_or(terminations, truncations)
     rewards[step] = torch.tensor(reward).to(device).view(-1)
-    #next_obs, next_done = torch.Tensor(next_obs['state']).to(device), torch.Tensor(next_done).to(device)
-    next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor([int(next_done)]).to(device)
-    #next_obs = torch.Tensor(next_obs).to(device)
-    
+    next_obs, next_done = torch.Tensor(next_obs['state']).to(device), torch.Tensor(next_done).to(device)
+
     if "final_info" in infos:
         for info in infos["final_info"]:
             if info and "episode" in info:
@@ -277,9 +268,9 @@ def flatten_batches(envs, obs, logprobs, actions, advantages, returns, values):
     returns (Tensor): Returns calculated for each step.
     values (Tensor): Values estimated by the agent.
     """
-    b_obs = obs.reshape((-1,) + envs.observation_space.shape)
+    b_obs = obs.reshape((-1,) + (17,))#envs.single_observation_space.shape)
     b_logprobs = logprobs.reshape(-1)
-    b_actions = actions.reshape((-1,) + envs.action_space.shape)
+    b_actions = actions.reshape((-1,) + envs.single_action_space.shape)
     b_advantages = advantages.reshape(-1)
     b_returns = returns.reshape(-1)
     b_values = values.reshape(-1)
@@ -455,9 +446,9 @@ def initialize_storage(args, envs, device):
     tuple: A tuple containing initialized tensors for obs, actions, logprobs, rewards, dones, values.
     """
     # ALGO Logic: Storage setup
-    obs = torch.zeros((args.num_steps, args.num_envs) + envs.observation_space.shape).to(device)
-    #obs = torch.zeros((args.num_steps, args.num_envs) + (,)).to(device)
-    actions = torch.zeros((args.num_steps, args.num_envs) + envs.action_space.shape).to(device)
+    #obs = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(device)
+    obs = torch.zeros((args.num_steps, args.num_envs) + (17,)).to(device)
+    actions = torch.zeros((args.num_steps, args.num_envs) + envs.single_action_space.shape).to(device)
     logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
     rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
     dones = torch.zeros((args.num_steps, args.num_envs)).to(device)
@@ -491,8 +482,8 @@ class Args:
     hf_entity: str = ""
     """the user or org name of the model repository from the Hugging Face Hub"""
     if ROVER:
-        #env_id: str = "TurtleBot3-v0"
-        env_id: str = "TurtleBot3_Circuit_Simple_Continuous-v0" #""RoverZero-v0",
+        env_id: str = "TurtleBot3-v0"
+        #env_id: str = "TurtleBot3_Circuit_Simple_Continuous-v0" #""RoverZero-v0",
     else:
         env_id: str = "HalfCheetah-v4"
 

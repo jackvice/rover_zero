@@ -1,0 +1,1000 @@
+ 1175  emacs ppo_origin.py &
+ 1176  python multi_input_ppo.py 
+ 1177  python multi_input_ppo_v2.py 
+ 1178  python multi_input_ppo_v3.py 
+ 1179  emacs ppo_origin.py &
+ 1180  python multi_input_ppo_v3.py 
+ 1181  ls
+ 1182  cd runs/
+ 1183  ls
+ 1184  du -sh *
+ 1185  cd ..
+ 1186  rm -rf runs/
+ 1187  mkdir runs
+ 1188  python multi_input_ppo_v3.py 
+ 1189  python ppo_origin.py 
+ 1190  cd runs/
+ 1191  ls
+ 1192  cd CartPole-v1__multi_input_ppo_v3__1__1704672416/
+ 1193  cd ..
+ 1194  ls -l CartPole-v1__multi_input_ppo_v3__1__1704672416/
+ 1195  ls -l CartPole-v1__ppo_origin__1__1704672464/
+ 1196  cd ..
+ 1197  ls
+ 1198  mv multi_input_ppo* bak/
+ 1199  python multi_input_ppo_v4.py 
+ 1200  python ppo_origin.py 
+ 1201  python multi_input_ppo_v4.py 
+ 1202  sudo apt install cmake g++ python3-pip wget git
+ 1203  python multi_input_ppo_v4.py 
+ 1204  cd src
+ 1205  cd rover
+ 1206  ls
+ 1207  ls -lsrt
+ 1208  cd multi-input/
+ 1209  ls
+ 1210  emacs ~/src/ant/ant.py &
+ 1211  cd ..
+ 1212  ls
+ 1213  rm -rf cleanrl/
+ 1214  git clone https://github.com/vwxyzjn/cleanrl.git
+ 1215  cd rover
+ 1216  find . -name "*single*.py"
+ 1217  cd multi-input/
+ 1218  ls
+ 1219  history
+ 1220  ls
+ 1221  conda activate torch
+ 1222  ls
+ 1223  ls -lsrt
+ 1224  python single_ppo_atari_v3.py 
+ 1225  ls -lsrt ~/miniconda3/envs/
+ 1226  conda deactivate
+ 1227  conda activate rover
+ 1228  python single_ppo_atari_v3.py 
+ 1229  ls bak/
+ 1230  ls
+ 1231  mv single_ppo_atari* bak/
+ 1232  ls
+ 1233  cp bak/single_ppo_atari_v3.py ./
+ 1234  ls
+ 1235  emacs single_ppo_atari_v3.py &
+ 1236  mv single_ppo_atari_v3.py bak/
+ 1237  ls
+ 1238  cp ~/src/cleanrl/cleanrl/ppo.py ./
+ 1239  ls
+ 1240  python ppo.py 
+ 1241  ls
+ 1242  cp ppo.py bak/ppo_origin.py
+ 1243  mv ppo.py ppo_multi_input.py
+ 1244  emacs ppo_multi_input.py &
+ 1245  python ppo_multi_input.py 
+ 1246  rm ppo_multi_input.py
+ 1247  ls
+ 1248  rm ppo_multi_input.py~ 
+ 1249  cp bak/ppo_origin.py ./ppo_multi_input.py 
+ 1250  emacs ppo_multi_input.py &
+ 1251  cp bak/ppo_origin.py ./
+ 1252  rm ppo_multi_input.py
+ 1253  python multi_input_ppo.py 
+ 1254  rm multi_input_ppo.py
+ 1255  emacs ppo_origin.py &
+ 1256  python ppo_origin.py 
+ 1257  python multi_input_ppo_v3.py 
+ 1258  python ppo_origin.py 
+ 1259  nvidia-smi
+ 1260  nvidia-smi -l
+ 1261  history
+ 1262  cd src/
+ 1263  cd rover
+ 1264  ls
+ 1265  ls -lsrt
+ 1266  cd multi-input/
+ 1267  ls
+ 1268  ls -lsrt
+ 1269  ls bak/
+ 1270  mv ppo_atari.py* bak/
+ 1271  ls
+ 1272  emacs multi_input_ppo_v4.py &
+ 1273  conda activate rover
+ 1274  ls
+ 1275  python multi_input_ppo_v4.py 
+ 1276  python ppo_origin.py 
+ 1277  python multi_input_ppo_v4.py 
+ 1278  python multi_input_ppo_v5.py 
+ 1279  nvidia-smi
+ 1280  youtube-dl https://www.youtube.com/watch?v=kbnY7D_BXrY&t=5s
+ 1281  sudo apt get youtube-dl
+ 1282  sudo apt-get youtube-dl
+ 1283  sudo apt-get install youtube-dl
+ 1284  emacs src/notes/jack_notes.txt &
+ 1285  ls
+ 1286  cd src/bah/
+ 1287  ls
+ 1288  cd heart_rate/
+ 1289  ls
+ 1290  ls -lsrt
+ 1291  emacs lstm_HR_3-class_v2.py &
+ 1292  more lstm_HR_3-class.txt 
+ 1293  ls -lsrt
+ 1294  emacs LSTM_HR_activity_3-Class_01-04-24.tflite &
+ 1295  emacs lstm_HR_3-class_v2.py
+ 1296  emacs lstm_HR_3-class_v2.py &
+ 1297  conda activate tf2
+ 1298  python lstm_HR_3-class_v2.py 
+ 1299  conda env list
+ 1300  cd src/
+ 1301  ls
+ 1302  cd rover/multi-input/
+ 1303  ls
+ 1304  mv multi_input_ppo_v* bak/
+ 1305  ls
+ 1306  ls runs/
+ 1307  rm -rf runs/
+ 1308  mkdir runs
+ 1309  ls
+ 1310  cd ..
+ 1311  pushup
+ 1312  conda activate rover
+ 1313  cd multi-input/
+ 1314  ls
+ 1315  python ppo_origin.py --env_id="LunarLander-v2"
+ 1316  python ppo_origin.py --num_envs=1
+ 1317  emacs multi_input_ppo.py &
+ 1318  ls
+ 1319  rm -rf runs
+ 1320  mkdir runs
+ 1321  cd ..
+ 1322  pushup
+ 1323  emacs gym_action_test.py &
+ 1324  python gym_action_test.py 
+ 1325  cd multi-input/
+ 1326  emacs ppo_origin.py &
+ 1327  python ppo_origin.py --num_envs=1
+ 1328  rm -rf runs/
+ 1329  mkdir runs
+ 1330  python ppo_origin.py --num_envs=1
+ 1331  python multi_input_ppo
+ 1332  python multi_input_ppo.py 
+ 1333  python ppo_origin.py --num_envs=1
+ 1334  python multi_input_ppo.py 
+ 1335  python ppo_origin.py --num_envs=1
+ 1336  python multi_input_ppo.py 
+ 1337  history > history1.txt
+ 1338  ls
+ 1339  nvidia-smi
+ 1340  cd src/rover
+ 1341  ls
+ 1342  ls -l
+ 1343  rm '#EEL_ant.py#' 
+ 1344  cd multi-input/
+ 1345  ls
+ 1346  ls -l
+ 1347  mv multi_input_ppo.py function_ppo_discrete.py
+ 1348  emacs function_ppo_discrete.py &
+ 1349  mv function_ppo_discrete.py functional_ppo_discrete.py 
+ 1350  emac functional_ppo_discrete.py &
+ 1351  emacs functional_ppo_discrete.py &
+ 1352  nvidia-smi
+ 1353  cd ..
+ 1354  grep -r "PixelObservationWrapper"
+ 1355  zsh
+ 1356  cd multi-input/
+ 1357  emacs bak/cap6614_dqn.py &
+ 1358  conda activate rosgym
+ 1359  python ppo_continuous_action_gym.py 
+ 1360  history > history3.txt
+ 1361  sudo apt update
+ 1362  apt list --upgradable' 
+ 1363  apt list --upgradable
+ 1364  sudo apt upgrade
+ 1365  cd src/
+ 1366  ls
+ 1367  cd notes/
+ 1368  pushup
+ 1369  cd ..
+ 1370  mv notes/ notes_bak
+ 1371  git clone git@github.com:jackvice/notes.git
+ 1372  mv notes/jack_notes.txt notes/jack_notesRover.txt 
+ 1373  cp notes_bak/jack_notes.txt notes/
+ 1374  cd notes
+ 1375  ls
+ 1376  ls -l
+ 1377  pushup
+ 1378  ls
+ 1379  ls -l
+ 1380  ls -lsrt
+ 1381  cd src
+ 1382  ls
+ 1383  cd bah/
+ 1384  ls
+ 1385  cd heart_rate/
+ 1386  ls
+ 1387  ls -lsrt
+ 1388  mv '#lstm_HR_IMU_3-class.py#' lstm_HR_IMU_3-classV2.py 
+ 1389  ls
+ 1390  emacs lstm_HR_IMU_3-classV2.py &
+ 1391  ls *.csv
+ 1392  ls -lsrt *.csv
+ 1393  more processed_heart_rate_3_class_v2.csv 
+ 1394  cp processed_heart_rate_3_class_v2.csv processed_heart_rate_3_class_test.py
+ 1395  more processed_heart_rate_3_class_v2.csv 
+ 1396  ls
+ 1397  mkdir data
+ 1398  mv *.csv data/
+ 1399  cd data/
+ 1400  ls
+ 1401  emacs add_random_imu.py &
+ 1402  ls
+ 1403  cd ..
+ 1404  ls *test*
+ 1405  mv processed_heart_rate_3_class_test.py data/processed_heart_rate_3_class_test.csv
+ 1406  cd data/
+ 1407  ls
+ 1408  python add_random_imu.py 
+ 1409  ls -lsrt
+ 1410  more heart_rate_plus_imu_3_class.csv 
+ 1411  cd ..
+ 1412  conda env list
+ 1413  conda activate droid
+ 1414  ls -lsrt
+ 1415  mv lstm_HR_3-class.txt lstm_HR_3-class_v3.py
+ 1416  emacs lstm_HR_3-class_v3.py &
+ 1417  python lstm_HR_3-class_v3.py
+ 1418  conda deactivate
+ 1419  conda activate tf2
+ 1420  python lstm_HR_3-class_v3.py
+ 1421  ls
+ 1422  ls -lsrt
+ 1423  ls
+ 1424  ls bak/
+ 1425  mv *.py bak/
+ 1426  ls
+ 1427  mv *.py~ bak/
+ 1428  ls
+ 1429  ls models/
+ 1430  mv *.tflite models/
+ 1431  ls
+ 1432  mv Keras_LSTM_fusion_Codelab.ipynb bak/
+ 1433  mv *.tgz bak/
+ 1434  mv *.zip bak/
+ 1435  ls
+ 1436  ls data/
+ 1437  cd data/
+ 1438  mv heart_rate_plus_imu_3_class.csv heart_rate_rand_imu_3_class.csv 
+ 1439  cd ..
+ 1440  python lstm_HR_IMU_3-classV2.py 
+ 1441  ls -lsrt
+ 1442  conda deactivate
+ 1443  cd ..
+ 1444  cd rover
+ 1445  ls
+ 1446  cd gym_rover/
+ 1447  ls
+ 1448  conda env list
+ 1449  ls
+ 1450  cd ..
+ 1451  ls
+ 1452  conda env activate
+ 1453  conda env list
+ 1454  conda activate rosgym
+ 1455  pip install --upgrade pip
+ 1456  ls
+ 1457  ign topic -l
+ 1458  ign gazebo -v 4 -r visualize_lidar.sdf
+ 1459  ls
+ 1460  export TURTLEBOT3_MODEL=burger
+ 1461  export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:`ros2 pkg prefix turtlebot3_gazebo`/share/turtlebot3_gazebo/models/
+ 1462  ros
+ 1463  export TURTLEBOT3_MODEL=burger
+ 1464  export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:`ros2 pkg prefix turtlebot3_gazebo`/share/turtlebot3_gazebo/models/
+ 1465  ros2 pkg list | grep turtlebot3
+ 1466  printenv ROS_DISTRO
+ 1467  sudo apt install ros-humble-turtlebot4*
+ 1468  sudo apt autoremove
+ 1469  sudo apt-get install chrony
+ 1470  systemctl status chrony.service
+ 1471  sudo apt-get install chrony
+ 1472  sudo apt install ros-humble-turtlebot4*
+ 1473  tail ~/.bashrc
+ 1474  tail -100 ~/.bashrc
+ 1475  ros
+ 1476  export TURTLEBOT4_MODEL=lite
+ 1477  ros2 pkg list | grep turtlebot4
+ 1478  export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:`ros2 pkg prefix turtlebot4_gazebo `/share/turtlebot4_gazebo/models/
+ 1479  export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:`ros2 pkg prefix turtlebot4_simulator`/share/turtlebot4_simulator/models/
+ 1480  $ ros2 pkg prefix turtlebot4_simulator
+ 1481  ros2 pkg prefix turtlebot4_simulator
+ 1482  ls `ros2 pkg prefix turtlebot4_simulator`/share/turtlebot4_simulator/launch
+ 1483  ls /opt/ros/humble/share/
+ 1484  ls /opt/ros/humble/share/turtlebot4_*
+ 1485  ls /opt/ros/humble/share/turtlebot4_simulator
+ 1486  ls `ros2 pkg prefix turtlebot4_simulator`/share/turtlebot4_simulator/environment
+ 1487  ls /opt/ros/humble/share/turtlebot4_simulator
+ 1488  ls /opt/ros/humble/share/turtlebot4_simulator/environment/
+ 1489  ls /opt/ros/humble/share/turtlebot4_simulator
+ 1490  sudo apt install ros-dev-tools
+ 1491  sudo apt update
+ 1492  sudo apt install ros-humble-turtlebot4-simulator
+ 1493  sudo apt autoremove
+ 1494  ros2 launch turtlebot4_ignition_bringup turtlebot4_ignition.launch.py
+ 1495  grep -r "import rclpy\|import torch" 
+ 1496  grep -r "import rclpy" *.py | xargs grep "import torch" 
+ 1497  grep -r "import rclpy" *.py | xargs grep "import" 
+ 1498  grep -r "import rclpy"  | xargs grep "import" 
+ 1499  grep -r "import rclpy"
+ 1500  cp -r gym_rover/ gym_turtle_4/
+ 1501  cd gym_turtle_4/
+ 1502  ls
+ 1503  more __init__.py 
+ 1504  cd ..
+ 1505  ls
+ 1506  grep -r "RoverZero-v0"
+ 1507  ls -lsrt
+ 1508  history
+ 1509  ls
+ 1510  ls -lsrt
+ 1511  pushup
+ 1512  cd multi-input/
+ 1513  rm -rf runs
+ 1514  mkdir runs
+ 1515  cd ..
+ 1516  pushup
+ 1517  ls -lsrt
+ 1518  emacs gym_action_test.py &
+ 1519  ls
+ 1520  mv gym_action_test.py bak/
+ 1521  ls
+ 1522  mv *.tgz bak
+ 1523  ls
+ 1524  cd gym_rover/
+ 1525  cd ..
+ 1526  cd gym_turtle_4/
+ 1527  ls
+ 1528  cd ..
+ 1529  ls
+ 1530  grep -r "RoverZero-v0"
+ 1531  emacs bak/ppo_roverV3.py &
+ 1532  ls -l bak/ppo_rover*.py
+ 1533  ls -l misc/ppo_rover.py 
+ 1534  cp bak/ppo_roverV3.py ./
+ 1535  ls
+ 1536  emacs ppo_roverV3.py &
+ 1537  python ppo_roverV3.py 
+ 1538  grep -r "gym_rover"
+ 1539  grep -r "gym_rover" --include=*.py
+ 1540  ls -l misc
+ 1541  ls -lsrt misc
+ 1542  cd test
+ 1543  cd ..
+ 1544  ls
+ 1545  cd gym-gazebo2/
+ 1546  cd ..
+ 1547  ls
+ 1548  cd rover
+ 1549  ls
+ 1550  cd misc/
+ 1551  ls
+ 1552  ls -lsrt
+ 1553  cd test/
+ 1554  ls
+ 1555  cd ..
+ 1556  cd ../bak/
+ 1557  ls -lsrt
+ 1558  cp rover_zero_ppo.py ..
+ 1559  ls
+ 1560  cd ..
+ 1561  ls
+ 1562  ls -lsrt *.py
+ 1563  mv ppo_roverV3.py bak/
+ 1564  emacs rover_zero_ppo.py &
+ 1565  python rover_zero_ppo.py 
+ 1566  find . -name "*frame_stack8*"
+ 1567  find . -name "*frame_stack*"
+ 1568  ls -lsrt bak/frame_stack*
+ 1569  mv bak/frame_stack.py ./
+ 1570  python rover_zero_ppo.py 
+ 1571  pip install gym[box2d]
+ 1572  python rover_zero_ppo.py 
+ 1573  cd ..
+ 1574  cd gym-gazebo2/
+ 1575  ls
+ 1576  cd ..
+ 1577  grep -r "turtlebot" --include=*.py
+ 1578  cd rover/gym_rover/
+ 1579  emacs __init__.py &
+ 1580  ls
+ 1581  cd __pycache__/
+ 1582  ls
+ 1583  cd ..
+ 1584  ls
+ 1585  cd envs/
+ 1586  ls
+ 1587  emacs __init__.py &
+ 1588  cp ../../misc/turtlebot3_env.py ./
+ 1589  emacs turtlebot3_env.py &
+ 1590  cd ..
+ 1591  ls
+ 1592  gym_rover/envs/
+ 1593  ls
+ 1594  cd gym_rover/
+ 1595  ls
+ 1596  cd envs/
+ 1597  ls
+ 1598  cd ..
+ 1599  ls
+ 1600  cd ..
+ 1601  ls
+ 1602  ls -lsrt
+ 1603  more gym_rover/envs/turtlebot3_env.py 
+ 1604  ls
+ 1605  grep -r "turtlebot" --include=*.py
+ 1606  grep -r "TurtleBot" --include=*.py
+ 1607  ls -lsrt
+ 1608  mkdir bak_01_21_24
+ 1609  mv *.py* bak_01_21_24/
+ 1610  cp bak_01_21_24/rover_zero_ppo.py ./turtlebot_ppo.py
+ 1611  emacs turtlebot_ppo.py 
+ 1612  emacs turtlebot_ppo.py &
+ 1613  rm turtlebot_ppo.py 
+ 1614  grep -r "Rover" --include=*.py
+ 1615  cd misc/
+ 1616  ls -lsrt
+ 1617  emacs zero_old.py &
+ 1618  mv zero_old.py zero_old_env.py 
+ 1619  pwd
+ 1620  cd ..
+ 1621  ls
+ 1622  grep -r "TurtleBot" --include=*.py
+ 1623  ls
+ 1624  ls gym_rover/
+ 1625  ls
+ 1626  cd new_08_17_23/
+ 1627  ls
+ 1628  cd ..
+ 1629  ls
+ 1630  rm -rf jax
+ 1631  more temp_history.txt 
+ 1632  emacs misc/ppo_zero.py
+ 1633  grep -r "roverZero" --include=*.py
+ 1634  grep -r "RoverZero" --include=*.py
+ 1635  pushup
+ 1636  conda activate rospy
+ 1637  conda activate rosgym
+ 1638  ls
+ 1639  ign topic -l
+ 1640  ls
+ 1641  emacs src/notes/jack_notes.txt &
+ 1642  printenv ROS_DISTRO
+ 1643  cd src/notes/
+ 1644  ls
+ 1645  ls -lsrt
+ 1646  cd Downloads/
+ 1647  ls -lsrt
+ 1648  duco dpkg dropbox_2023.09.06_amd64.deb 
+ 1649  sudo dpkg dropbox_2023.09.06_amd64.deb 
+ 1650  sudo dpkg -i dropbox_2023.09.06_amd64.deb 
+ 1651  sudo apt update
+ 1652  ls
+ 1653  cd Downloads/
+ 1654  ls
+ 1655  ls -lsrt
+ 1656  rm VisDrone2019-VID-train.zip 
+ 1657  history
+ 1658  whereis dropbox
+ 1659  sudo apt remove dropbox
+ 1660  nvidia-smi
+ 1661  cd src/
+ 1662  ls
+ 1663  cd bah/
+ 1664  ls
+ 1665  mkdir galvion
+ 1666  cd galvion/
+ 1667  git clone https://github.com/hoitab/TFLClassify.git
+ 1668  cd TFLClassify/
+ 1669  cd ..
+ 1670  rm -rf TFLClassify/
+ 1671  cd 
+ 1672  cd src/
+ 1673  git clone https://github.com/tensorflow/tensorflow.git
+ 1674  cd ..
+ 1675  cd Downloads/
+ 1676  ls
+ 1677  ls -lsrt
+ 1678  sudo apt -y install libportaudio2
+ 1679  conda activate jup
+ 1680  pip install -q tflite-model-maker
+ 1681  top
+ 1682  nvidia-smi
+ 1683  ls
+ 1684  cd Downloads/
+ 1685  ls -lsrt
+ 1686  mv 'Efficient_multi_modal (3).pdf' Efficient_multi_modal_vice.pdf
+ 1687  nvidia-smi
+ 1688  ls
+ 1689  ls -lsrt
+ 1690  mv VisDrone2019-DET-train.zip ~/data
+ 1691  cd darl_refs/
+ 1692  cd ..
+ 1693  cd
+ 1694  cd data/
+ 1695  ls
+ 1696  df -u
+ 1697  df -U
+ 1698  df
+ 1699  df -h
+ 1700  ls
+ 1701  unzip VisDrone2019-DET-train.zip 
+ 1702  cd VisDrone2019-DET-train/
+ 1703  ls
+ 1704  cd annotations/
+ 1705  ls
+ 1706  more 9999951_00000_d_0000257.txt
+ 1707  cd 
+ 1708  cd src/bah/galvion/
+ 1709  ls
+ 1710  mkdir visdrone
+ 1711  cd visdrone/
+ 1712  cp ~/Downloads/image_classification.ipynb ./
+ 1713  conda env list
+ 1714  conda activate jup
+ 1715  jupyter notebook
+ 1716  conda env list
+ 1717  conda create --name tflite python=3.10
+ 1718  conda activate tflite
+ 1719  pip install tflite-model-maker
+ 1720  pip install --upgrade pip
+ 1721  pip install --upgrade wheels
+ 1722  conda deactivate
+ 1723  conda create --name tflite python=3.10
+ 1724  conda create --name tflite python=3.9
+ 1725  conda activate tflite
+ 1726  pip install --upgrade wheels
+ 1727  pip install --upgrade wheel
+ 1728  pip install --upgrade pip setuptools
+ 1729  pip install tflite-model-maker
+ 1730  pip install notebook
+ 1731  jupyter notebook
+ 1732  cd src/
+ 1733  ls
+ 1734  cd bah/
+ 1735  ls
+ 1736  cd galvion/visdrone/
+ 1737  ls
+ 1738  jupyter notebook
+ 1739  conda deactivate
+ 1740  cond activate droid
+ 1741  conda activate droid
+ 1742  python
+ 1743  conda deactivate
+ 1744  conda activate tf2
+ 1745  ls
+ 1746  conda deactivate
+ 1747  conda activate tf2
+ 1748  python
+ 1749  pip install tflite-model-maker
+ 1750  conda deactivate
+ 1751  conda create --name tflite python=3.10
+ 1752  conda activate tflite
+ 1753  pip install upgrade pip
+ 1754  pip install --upgrade pip wheel setuptools
+ 1755  pip install tflite-model-maker
+ 1756  conda deactivate
+ 1757  conda create --name tflite python=3.8
+ 1758  conda activate tflite
+ 1759  pip install --upgrade pip wheel setuptools
+ 1760  pip install tflite-model-maker
+ 1761  pip install notebook
+ 1762  jupiter notebook
+ 1763  jupyter notebook
+ 1764  ls
+ 1765  jupyter notebook
+ 1766  conda upgrade all
+ 1767  conda update -all
+ 1768  conda upgrade notebook
+ 1769  pip install --upgrade notebook
+ 1770  jupyter notebook
+ 1771  conda deactivate
+ 1772  conda create --name tflite python=3.9
+ 1773  conda activate tflite
+ 1774  pip install --upgrade pip wheel setuptools
+ 1775  pip install tflite-model-maker
+ 1776  pip install --upgrade pip wheel setuptools
+ 1777  pip install --upgrade notebook
+ 1778  jupiter notebook
+ 1779  jupyter notebook
+ 1780  nvidia-smi
+ 1781  conda env list
+ 1782  cd src/bah/galvion/
+ 1783  ls
+ 1784  cd visdrone/
+ 1785  conda activate jup
+ 1786  ls
+ 1787  jupyter notebook
+ 1788  conda deactivate
+ 1789  nvidia-smi
+ 1790  nvidia-smi -l
+ 1791  conda activate tflite
+ 1792  print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+ 1793  python
+ 1794  ls
+ 1795  ls -lsrt
+ 1796  ls -lsrth
+ 1797  mv model.tflite new_trained_model_flowers.tflite
+ 1798  conda deactivate
+ 1799  conda env list
+ 1800  conda create --name tflite --clone tf2
+ 1801  conda activate tflite
+ 1802  cd src/bah/galvion/
+ 1803  ls
+ 1804  cd visdrone/
+ 1805  jupyter notebook
+ 1806  pip install jupyterlab
+ 1807  jupyter lab
+ 1808  cd src/bah/galvion/visdrone/
+ 1809  ls
+ 1810  rm new_trained_model_flowers.tflite 
+ 1811  mv model.tflite test_mobilenet_v2_01_24_24.tflite 
+ 1812  ls /tmp/
+ 1813  ls /tmp/ -lsrt
+ 1814  cp /tmp/tfhub_modules/145bb06ec3b59b08fb564ab752bd5aa222bfb50a.descriptor.txt 
+ 1815  more /tmp/tfhub_modules/145bb06ec3b59b08fb564ab752bd5aa222bfb50a.descriptor.txt 
+ 1816  ls
+ 1817  mkdir data
+ 1818  cd data/
+ 1819  mv ~/Downloads/flower_photos.tgz ./
+ 1820  tar -xvf flower_photos.tgz 
+ 1821  mv ~/data/VisDrone2019-DET-train ./
+ 1822  ls
+ 1823  cd VisDrone2019-DET-train/
+ 1824  ls
+ 1825  cd ..
+ 1826  ls VisDrone2019-DET-train/
+ 1827  ls VisDrone2019-DET-train/annotations/
+ 1828  cd Downloads/
+ 1829  mkdir delete_me
+ 1830  mv *.* delete_me/
+ 1831  ls
+ 1832  rm -rf old/
+ 1833  mv checkpoint delete_me/
+ 1834  mv Jack_Vice_LDM/ delete_me/
+ 1835  mv nvidia/ delete_me/
+ 1836  mv darl_refs/ delete_me/
+ 1837  ls
+ 1838  cd src/bah/galvion/visdrone/from_ipynb/
+ 1839  ls
+ 1840  mkdir models
+ 1841  ls
+ 1842  cd models/
+ 1843  ls
+ 1844  cd ..
+ 1845  mkdir model_downloads
+ 1846  cd model_downloads/
+ 1847  ls
+ 1848  ls -lsrt ~/Downloads/
+ 1849  mv ~/Downloads/ssd_mobilenet_v2_fpnlite_640x640_coco17_tpu-8.tar.gz ./
+ 1850  ls
+ 1851  ls -lsrt ~/Downloads/
+ 1852  cd src/bah/galvion/
+ 1853  ls
+ 1854  cd visdrone/
+ 1855  ls
+ 1856  cd data/
+ 1857  ls
+ 1858  cd VisDrone2019-DET-train/
+ 1859  ls
+ 1860  emacs mean_std.py &
+ 1861  ls images/
+ 1862  conda activate tfgpu
+ 1863  python
+ 1864  conda deactivate
+ 1865  conda env list
+ 1866  conda activate torch
+ 1867  python
+ 1868  ls
+ 1869  python mean_std.py 
+ 1870  python
+ 1871  python mean_std.py 
+ 1872  ls
+ 1873  python mean_std.py 
+ 1874  ls
+ 1875  cd ..
+ 1876  ls
+ 1877  cd ..
+ 1878  cd from_ipynb/metadata_model/
+ 1879  ls
+ 1880  ls -lsrt
+ 1881  emacs metadata_writer_for_image_classifier.py &
+ 1882  history
+ 1883  ls
+ 1884  ls -l
+ 1885  python ./metadata_writer_for_image_classifier.py     --model_file=./detect.tflite     --label_file=./labelmap.txt     --export_directory=model_with_metadata
+ 1886  conda deactivate
+ 1887  conda activate tflite
+ 1888  python ./metadata_writer_for_image_classifier.py     --model_file=./detect.tflite     --label_file=./labelmap.txt     --export_directory=model_with_metadata
+ 1889  mkdir model_with_metadata
+ 1890  python ./metadata_writer_for_image_classifier.py     --model_file=./detect.tflite     --label_file=./labelmap.txt     --export_directory=model_with_metadata
+ 1891  ls
+ 1892  mkdir bak
+ 1893  conda deactivate
+ 1894  conda create --name tflite-util python=3.10
+ 1895  conda activate tflite-util
+ 1896  pip install --upgrade pip setuptools wheel
+ 1897  pip install python-dateutil
+ 1898  pip install pyparsing
+ 1899  pip install python-dateutil
+ 1900  pip install --upgrade pip setuptools wheel
+ 1901  pip install tflite-support-nightly
+ 1902  ls
+ 1903  ls bak/
+ 1904  mv metadata_writer_for_image_classifier.py* bak/
+ 1905  emacs metadata_writer_obj_detect.py &
+ 1906  ls
+ 1907  python metadata_writer_obj_detect.py 
+ 1908  mkdir test
+ 1909  cd test/
+ 1910  curl -L https://github.com/tensorflow/tflite-support/raw/master/tensorflow_lite_support/metadata/python/tests/testdata/object_detector/ssd_mobilenet_v1.tflite -o ssd_mobilenet_v1.tflite
+ 1911  curl -L https://github.com/tensorflow/tflite-support/raw/master/tensorflow_lite_support/metadata/python/tests/testdata/object_detector/labelmap.txt -o ssd_mobilenet_labels.txt
+ 1912  ls
+ 1913  emacs metadata_test.py &
+ 1914  python metadata_test.py 
+ 1915  ls -lsrt
+ 1916  cd ..
+ 1917  python metadata_writer_obj_detect.py 
+ 1918  ls -lsrt
+ 1919  cp visdrone_metadata.tflite ~/Downloads/
+ 1920  mv visdrone_metadata.tflite visdrone_metadata_test.tflite 
+ 1921  cp visdrone_metadata_test.tflite ~/Downloads/
+ 1922  mv detect.tflite bak/
+ 1923  rm ~/Downloads/detect.tflite 
+ 1924  mv ~/Downloads/detect\ \(1\).tflite detect.tflite
+ 1925  ls
+ 1926  python metadata_writer_obj_detect.py 
+ 1927  ls -lsrt
+ 1928  mv visdrone_metadata.tflite visdrone_metadata_good.tflite
+ 1929  cp visdrone_metadata_good.tflite ~/Downloads/
+ 1930  ls
+ 1931  mv detect.tflite bak/detect_01-25-24.tflite 
+ 1932  mv ~/Downloads/detect.tflite ./
+ 1933  ls
+ 1934  mv visdrone_metadata_good.tflite bak/visdrone_metadata_01-25-24.tflite 
+ 1935  rm visdrone_metadata_test.tflite 
+ 1936  ls
+ 1937  ls 
+ 1938  ls -lsrt
+ 1939  python metadata_writer_obj_detect.py 
+ 1940  ls -lsrt
+ 1941  mv visdrone_01-26-2024_12-30.tflite visdrone320x_01-26-2024_12-30.tflite 
+ 1942  ls
+ 1943  mv detect.tflite bak/detectx320_01-26-24.tflite
+ 1944  mv ~/Downloads/detect.tflite ./
+ 1945  ls
+ 1946  python metadata_writer_obj_detect.py 
+ 1947  ls
+ 1948  mv detect.tflite bak/detectx640_01-26-24.tflite
+ 1949  ls
+ 1950  mv ~/Downloads/detect.tflite ./
+ 1951  python metadata_writer_obj_detect.py 
+ 1952  ls -lsrt
+ 1953  downloads
+ 1954  cd Downloads/
+ 1955  ls
+ 1956  rm Efficient_multi_modal*
+ 1957  ls
+ 1958  cd ~/Videos/
+ 1959  ls
+ 1960  cd Screencasts/
+ 1961  ls
+ 1962  ffmpeg -fflags +genpts -i 'Screencast from 01-28-2024 09:04:40 PM.webm' -r 24 reveal_2.mp4
+ 1963  ffmpeg -i 'Screencast from 01-28-2024 09:04:40 PM.webm' -c copy reveal_2.mp4
+ 1964  ls 
+ 1965  mv Screencast from 01-28-2024 09:04:40 PM.webm reveal.webm
+ 1966  mv 'Screencast from 01-28-2024 09:04:40 PM.webm' reveal.webm
+ 1967  ffmpeg -i reveal.webm -c copy reveal_2.mp4
+ 1968  ffmpeg -i reveal.webm -c:v libx264 -preset slow -crf 22  reveal_2.mp4
+ 1969  ffmpeg -i reveal.webm -vf "scale=586:-2" -c:v libx264 -preset slow -crf 22 reveal_2.mp4
+ 1970  ros
+ 1971  rqt
+ 1972  grep -r "turtlebot3_env_node"
+ 1973  cd src/rover_zero/
+ 1974  grep -r "turtlebot3_env_node"
+ 1975  emacs gym-turtlebot3/gym_turtlebot3/envs/turtlebot3_env.py &
+ 1976  ros
+ 1977  ros2 service list
+ 1978  rqt
+ 1979  cd src/
+ 1980  ls
+ 1981  cd rover_zero/
+ 1982  ls
+ 1983  emacs ~/src/notes/jack_notes.txt &
+ 1984  ros
+ 1985  rover
+ 1986  ros2 launch roverrobotics_gazebo 4wd_rover_gazebo.launch.py
+ 1987  conda activate tbot3
+ 1988  cd ~/src/rover_zero/gym-turtlebot3/examples
+ 1989  ls
+ 1990  ls -lsrt
+ 1991  python stable_baselines3_ppo.py 
+ 1992  conda deactivate
+ 1993  export TURTLEBOT3_MODEL=burger
+ 1994  ros2 launch turtlebot3_gazebo turtlebot3_world.launch.py
+ 1995  export TURTLEBOT3_MODEL=waffle
+ 1996  ros2 launch turtlebot3_gazebo turtlebot3_world.launch.py
+ 1997  cd src/rover_zero/
+ 1998  pushup
+ 1999  emacs ../notes/jack_notes.txt &
+ 2000  ls -lsrt
+ 2001  emacs ppo_rover_02-01-24.py &
+ 2002  find . -name "*rover*.py" -type f -exec ls -lt {} \;
+ 2003  find . -name "*.py" -type f -exec ls -lt {} \;
+ 2004  find . -name "*.py" -type f -exec ls -lt {} +
+ 2005  cd ..
+ 2006  find . -name "*.py" -type f -exec ls -lt {} +
+ 2007  find . -name "*funct*.py" -type f -exec ls -lt {} +
+ 2008  find . -name "*funct*.py" -type f -exec ls -ltr {} +
+ 2009  cd ./rover_zero/multi-input/
+ 2010  ls -lsrt
+ 2011  emacs ppo_continuous_action_gym.py &
+ 2012  cd ..
+ 2013  pushup
+ 2014  cd multi-input/
+ 2015  emacs multi_input_ppo_continuous.py &
+ 2016  conda env list
+ 2017  conda activate rosgym
+ 2018  pyton multi_input_ppo_continuous.py
+ 2019  python multi_input_ppo_continuous.py
+ 2020  history
+ 2021  cd ..
+ 2022  ls
+ 2023  conda deactivate 
+ 2024  conda activate tbot3
+ 2025  python funct_ppo_02-03-24.py 
+ 2026  grep -r "PixelObservationWrapper"
+ 2027  cp multi-input/pixel_observation.py ./
+ 2028  python funct_ppo_02-03-24.py 
+ 2029  ls
+ 2030  history >> history_02-04-24.txt
+ 2031  ls
+ 2032  emacs history_02-04-24.txt &
+ 2033  ros
+ 2034  rover
+ 2035  export TURTLEBOT3_MODEL=waffle
+ 2036  ls -lsrt
+ 2037  python funct_ppo_02-03-24.py 
+ 2038  find . -name "*.py" -type f -exec ls -ltr {} +
+ 2039  cd gym-turtlebot3/examples/
+ 2040  ls
+ 2041  ls -lsrt
+ 2042  python stable_baselines3_ppo.py 
+ 2043  cd ..
+ 2044  ls
+ 2045  cd ..
+ 2046  ls
+ 2047  find . -name "stable*.py" -type f -exec ls -ltr {} +
+ 2048  ls
+ 2049  emacs gym-turtlebot3/examples/stable_baselines3_ppo.py &
+ 2050  ls
+ 2051  python funct_ppo_02-03-24.py 
+ 2052  cd gym-turtlebot3/
+ 2053  ls
+ 2054  pip install -e .
+ 2055  python funct_ppo_02-03-24.py 
+ 2056  cd ..
+ 2057  python funct_ppo_02-03-24.py 
+ 2058  emacs /home/jack/.local/lib/python3.10/site-packages/gym/vector/sync_vector_env.py
+ 2059  python funct_ppo_02-03-24.py 
+ 2060  cp gym-turtlebot3/examples/stable_baselines3_ppo.py ./
+ 2061  python stable_baselines3_ppo.py 
+ 2062  python funct_ppo_02-03-24.py 
+ 2063  find . -name "*.py" -type f -exec ls -ltr {} +
+ 2064  mv funct_ppo_02-03-24.py bak
+ 2065  ls
+ 2066  mv ppo_rover_02-0* bak_01_21_24/
+ 2067  mv bak/funct_ppo_02-03-24.py bak_01_21_24/
+ 2068  ls
+ 2069  python ppo_turtle.py 
+ 2070  pushup
+ 2071  python ppo_turtle.py 
+ 2072  python 
+ 2073  python ppo_turtle.py 
+ 2074  grep -r "TurtleBot3_Circuit_Simple_Continuous"
+ 2075  grep -r --include='*.py' "TurtleBot3_Circuit_Simple_Continuous"
+ 2076  python ppo_turtle.py 
+ 2077  grep -r --include='*.py' "TurtleBot3_Circuit_Simple_Continuous"
+ 2078  cd gym-turtlebot3/
+ 2079  pip install -e .
+ 2080  cd ..
+ 2081  python ppo_turtle.py 
+ 2082  find . -name "*.py" -type f -exec ls -ltr {} +
+ 2083  emacs ./gym-turtlebot3/gym_turtlebot3/envs/turtle_env.py
+ 2084  emacs ./gym-turtlebot3/gym_turtlebot3/envs/turtle_env.py &
+ 2085  emacs ./gym-turtlebot3/gym_turtlebot3/envs/turtlebot3_env_02-02-24_v2.py &
+ 2086  cd gym-turtlebot3/gym_turtlebot3/envs/
+ 2087  ls
+ 2088  more __init__.py 
+ 2089  cd ..
+ 2090  ls
+ 2091  more __init__.py 
+ 2092  cd ..
+ 2093  ls
+ 2094  python ppo_turtle.py 
+ 2095  emacs gym-turtlebot3/gym_turtlebot3/__init__.py &
+ 2096  cd gym-turtlebot3/gym_turtlebot3/envs/
+ 2097  ls -lsrt
+ 2098  more __init__.py 
+ 2099  cd ..
+ 2100  more __init__.py 
+ 2101  export PYTHONPATH=$PYTHONPATH:/home/jack/src/rover_zero/gym-turtlebot3
+ 2102  cd ..
+ 2103  python ppo_turtle.py 
+ 2104  emacs gym-turtlebot3/gym_turtlebot3/envs/turtlebot3_env.py &
+ 2105  cd gym-turtlebot3/gym_turtlebot3/envs/
+ 2106  ls
+ 2107  ls -lsrt
+ 2108  mkdir bak
+ 2109  mv turtle* bak/
+ 2110  cd bak/
+ 2111  cp turtle_env.py ../
+ 2112  cd ..
+ 2113  mv turtle_env.py turtlebot3_env.py
+ 2114  emacs turtlebot3_env.py &
+ 2115  cd ..
+ 2116  ls
+ 2117  python ppo_turtle.py 
+ 2118  pip install scipy
+ 2119  python ppo_turtle.py 
+ 2120  ls
+ 2121  find . -name "*gym_gazebo2*"
+ 2122  ls
+ 2123  ls -l
+ 2124  cd gym-turtlebot3/
+ 2125  ls
+ 2126  cd gym_turtlebot3
+ 2127  ls
+ 2128  cd envs/
+ 2129  ls
+ 2130  rm turtlebot3_env.py 
+ 2131  cp bak/turtlebot3_env.py ../
+ 2132  ls
+ 2133  mv ../turtlebot3_env.py ./
+ 2134  ls
+ 2135  cd ..
+ 2136  python ppo_turtle.py 
+ 2137  emacs gym-turtlebot3/gym_turtlebot3/envs/turtlebot3_env.py &
+ 2138  ls
+ 2139  emacs gym-turtlebot3/gym_turtlebot3/envs/__init__.py &
+ 2140  emacs gym-turtlebot3/gym_turtlebot3/__init__.py &
+ 2141  ls
+ 2142  python ppo_turtle.py 
+ 2143  emacs /home/jack/src/rover_zero/gym-turtlebot3/gym_turtlebot3/envs/respawnGoal.py &
+ 2144  python ppo_turtle.py 
+ 2145  ls
+ 2146  more stable_baselines3_ppo.py 
+ 2147  python stable_baselines3_ppo.py 
+ 2148  emacs simple_test.py &
+ 2149  python simple_test.py 
+ 2150  rm simple_test.py 
+ 2151  ls
+ 2152  python stable_baselines3_ppo.py 
+ 2153  emacs stable_baselines3_ppo.py &
+ 2154  cd gym-turtlebot3/gym_turtlebot3/envs/
+ 2155  ls
+ 2156  cd bak/
+ 2157  ls -lsrt
+ 2158  mv turtlebot3_env.py~ turtlebot3_env_02-02-24_vX.py 
+ 2159  cp turtlebot3_env_02-02-24_v* ../
+ 2160  cd ..
+ 2161  ls
+ 2162  more __init__.py 
+ 2163  more turtlebot3_env_02-02-24_vX.py 
+ 2164  more turtlebot3_env_02-02-24_v2.py 
+ 2165  ls
+ 2166  cp turtlebot3_env.py turtlebot3_env_origin.py 
+ 2167  cd ..
+ 2168* 
+ 2169  python stable_baselines3_ppo.py 
+ 2170  ls
+ 2171  python stable_baselines3_ppo.py 
+ 2172  ls
+ 2173  hisroty >> history_02-08-24.txt 
+ 2174  history >> history_02-08-24.txt 

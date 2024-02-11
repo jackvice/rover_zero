@@ -6,7 +6,7 @@ import time
 from dataclasses import dataclass
 #from pixel_observation import PixelObservationWrapper
 import gym
-#import gym_turtlebot3
+import gym_turtlebot3
 import rclpy
 import numpy as np
 import matplotlib.pyplot as plt
@@ -66,11 +66,16 @@ def rover_main():
     device, writer = setup_logging_and_seeding(args, run_name)
 
     # env setup
-    envs = gym.vector.SyncVectorEnv(
-        [make_env(args.env_id, i, args.capture_video, run_name, args.gamma) for i in range(args.num_envs)]
-    )
-    assert isinstance(envs.single_action_space, gym.spaces.Box), \
+    #envs = gym.vector.SyncVectorEnv(
+    #    [make_env(args.env_id, i, args.capture_video, run_name, args.gamma) for i in range(args.num_envs)]
+    #)
+    envs = make_env(args.env_id, 0, args.capture_video, run_name, args.gamma)()
+    
+    print("environment made")
+    assert isinstance(envs.action_space, gym.spaces.Box), \
         "only continuous action space is supported"
+    #assert isinstance(envs.single_action_space, gym.spaces.Box), \  # vec env
+        #"only continuous action space is supported"
     agent = Agent(envs).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
@@ -128,8 +133,8 @@ def rover_main():
 
                 mb_advantages = b_advantages[mb_inds]
                 if args.norm_adv:
-                    mb_advantages = (mb_advantages - mb_advantages.mean()) /
-                    (mb_advantages.std() + 1e-8)
+                    mb_advantages = (mb_advantages - mb_advantages.mean()) \
+                        (mb_advantages.std() + 1e-8)
 
                 # Policy loss
                 pg_loss = calc_some_losses(mb_advantages, ratio, args)
@@ -170,7 +175,29 @@ def rover_main():
     rclpy.shutdown()
 
 def make_env(env_id, idx, capture_video, run_name, gamma):
+
+    env = gym.make('TurtleBot3_Circuit_Simple_Continuous-v0') 
+    if capture_video and idx == 0:
+        env = gym.make(env_id)
+        #env = gym.make(env_id, render_mode="rgb_array")
+        #env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
+    else:
+    env = gym.make(env_id)
+    env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
+    env = gym.wrappers.RecordEpisodeStatistics(env)
+    env = gym.wrappers.ClipAction(env)
+    env = gym.wrappers.NormalizeObservation(env)
+    env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
+    env = gym.wrappers.NormalizeReward(env, gamma=gamma)
+    env = gym.wrappers.TransformReward(env, lambda reward: np.clip(reward, -10, 10))
+    #env = PixelObservationWrapper(env, pixels_only=False)
+    return env
+
+    
+    
+def make_env_thunk(env_id, idx, capture_video, run_name, gamma):
     def thunk():
+        env = gym.make('TurtleBot3_Circuit_Simple_Continuous-v0') 
         if capture_video and idx == 0:
             env = gym.make(env_id)
             #env = gym.make(env_id, render_mode="rgb_array")
@@ -188,83 +215,6 @@ def make_env(env_id, idx, capture_video, run_name, gamma):
         return env
 
     return thunk
-
-
-def initialize_args():
-    """
-    Initializes and sets up the arguments for the training process.
-
-    Returns:
-    Namespace: The arguments after setup.
-    str: The generated run name for the training.
-    """
-    args = tyro.cli(Args)
-    args.batch_size = int(args.num_envs * args.num_steps)
-    args.minibatch_size = int(args.batch_size // args.num_minibatches)
-    args.num_iterations = args.total_timesteps // args.batch_size
-    run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
-
-    return args, run_name
-
-
-def setup_logging_and_seeding(args, run_name):
-    """
-    Sets up logging and seeding for reproducibility.
-
-    Parameters:
-    args (Namespace): The arguments after setup.
-    run_name (str): The generated run name for the training.
-    """
-    if args.track:
-        import wandb
-
-        wandb.init(
-            project=args.wandb_project_name,
-            entity=args.wandb_entity,
-            sync_tensorboard=True,
-            config=vars(args),
-            name=run_name,
-            monitor_gym=True,
-            save_code=True,
-        )
-    writer = SummaryWriter(f"runs/{run_name}")
-    writer.add_text(
-        "hyperparameters",
-        "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
-    )
-
-    # TRY NOT TO MODIFY: seeding
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
-    torch.backends.cudnn.deterministic = args.torch_deterministic
-    device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
-    
-    return device, writer
-
-
-def initialize_storage(args, envs, device):
-    """
-    Initializes storage for observations, actions, log probabilities, rewards, dones, and values.
-
-    Parameters:
-    args (Namespace): Contains arguments like the number of steps and environments.
-    envs (Env): The environment to get observation and action space.
-    device (Device): The device to use for tensor operations.
-
-    Returns:
-    tuple: A tuple containing initialized tensors for obs, actions, logprobs, rewards, dones, values.
-    """
-    # ALGO Logic: Storage setup
-    #obs = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(device)
-    obs = torch.zeros((args.num_steps, args.num_envs) + (17,)).to(device)
-    actions = torch.zeros((args.num_steps, args.num_envs) + envs.single_action_space.shape).to(device)
-    logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
-    rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
-    dones = torch.zeros((args.num_steps, args.num_envs)).to(device)
-    values = torch.zeros((args.num_steps, args.num_envs)).to(device)
-
-    return obs, actions, logprobs, rewards, dones, values
 
 def initialize_env(args, envs, device):
     """
@@ -428,7 +378,85 @@ def calc_some_losses(mb_advantages, ratio, args):
     pg_loss2 = -mb_advantages * torch.clamp(ratio, 1 - args.clip_coef, 1 + args.clip_coef)
     pg_loss = torch.max(pg_loss1, pg_loss2).mean()
     return pg_loss
+
+
+def initialize_args():
+    """
+    Initializes and sets up the arguments for the training process.
+
+    Returns:
+    Namespace: The arguments after setup.
+    str: The generated run name for the training.
+    """
+    args = tyro.cli(Args)
+    args.batch_size = int(args.num_envs * args.num_steps)
+    args.minibatch_size = int(args.batch_size // args.num_minibatches)
+    args.num_iterations = args.total_timesteps // args.batch_size
+    run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+
+    return args, run_name
+
+
+def setup_logging_and_seeding(args, run_name):
+    """
+    Sets up logging and seeding for reproducibility.
+
+    Parameters:
+    args (Namespace): The arguments after setup.
+    run_name (str): The generated run name for the training.
+    """
+    if args.track:
+        import wandb
+
+        wandb.init(
+            project=args.wandb_project_name,
+            entity=args.wandb_entity,
+            sync_tensorboard=True,
+            config=vars(args),
+            name=run_name,
+            monitor_gym=True,
+            save_code=True,
+        )
+    writer = SummaryWriter(f"runs/{run_name}")
+    writer.add_text(
+        "hyperparameters",
+        "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
+    )
+
+    # TRY NOT TO MODIFY: seeding
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.backends.cudnn.deterministic = args.torch_deterministic
+    device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
     
+    return device, writer
+
+
+def initialize_storage(args, envs, device):
+    """
+    Initializes storage for observations, actions, log probabilities, rewards, dones, and values.
+
+    Parameters:
+    args (Namespace): Contains arguments like the number of steps and environments.
+    envs (Env): The environment to get observation and action space.
+    device (Device): The device to use for tensor operations.
+
+    Returns:
+    tuple: A tuple containing initialized tensors for obs, actions, logprobs, rewards, dones, values.
+    """
+    # ALGO Logic: Storage setup
+    #obs = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(device)
+    obs = torch.zeros((args.num_steps, args.num_envs) + (17,)).to(device)
+    actions = torch.zeros((args.num_steps, args.num_envs) + envs.single_action_space.shape).to(device)
+    logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
+    rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
+    dones = torch.zeros((args.num_steps, args.num_envs)).to(device)
+    values = torch.zeros((args.num_steps, args.num_envs)).to(device)
+
+    return obs, actions, logprobs, rewards, dones, values
+
+
 @dataclass
 class Args:
     exp_name: str = os.path.basename(__file__)[: -len(".py")]
@@ -454,7 +482,8 @@ class Args:
     hf_entity: str = ""
     """the user or org name of the model repository from the Hugging Face Hub"""
     if ROVER:
-        env_id: str = "TurtleBot3_Circuit_Simple_Continuous-v0" #""RoverZero-v0",
+        env_id: str = "TurtleBot3-v0"
+        #env_id: str = "TurtleBot3_Circuit_Simple_Continuous-v0" #""RoverZero-v0",
     else:
         env_id: str = "HalfCheetah-v4"
 
