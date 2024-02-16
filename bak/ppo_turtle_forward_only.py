@@ -66,10 +66,16 @@ class Agent(nn.Module):
 
 
 
+
 def rover_main():
     rclpy.init()
     args, run_name = initialize_args()
     device, writer = setup_logging_and_seeding(args, run_name)
+
+    # env setup
+    #envs = gym.vector.SyncVectorEnv(
+    #    [make_env(args.env_id, i, args.capture_video, run_name, args.gamma) for i in range(args.num_envs)]
+    #)
     envs = make_env(args.env_id, args.capture_video, run_name, args.gamma)
     
     print("environment made")
@@ -82,6 +88,9 @@ def rover_main():
     obs, actions, logprobs, rewards, dones, values = initialize_storage(args, envs, device)
 
     next_obs, next_done, global_step, start_time = initialize_env(args, envs, device)
+    #next_obs = torch.Tensor(next_obs).to(device)
+    #imu_obs = torch.Tensor(next_obs['state']).to(device)
+    #pixel_obs = torch.Tensor(next_obs['pixels']).to(device)
 
     for iteration in range(1, args.num_iterations + 1):
         # Annealing the rate if instructed to do so.
@@ -92,7 +101,7 @@ def rover_main():
 
         for step in range(0, args.num_steps):
             #print('step num', step)
-            global_step += 1
+            global_step += args.num_envs
             obs[step] = next_obs
             dones[step] = next_done
             # ALGO LOGIC: action logic
@@ -120,9 +129,6 @@ def rover_main():
 
                 _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds],
                                                                               b_actions[mb_inds])
-                print("newlogprob shape:", newlogprob.shape)
-                print("b_logprobs[mb_inds] shape:", b_logprobs[mb_inds].shape)
-
                 logratio = newlogprob - b_logprobs[mb_inds]
                 ratio = logratio.exp()
 
@@ -158,6 +164,50 @@ def rover_main():
             if args.target_kl is not None and approx_kl > args.target_kl:
                 break
 
+        """
+        for epoch in range(args.update_epochs):
+            np.random.shuffle(b_inds)
+            for start in range(0, args.batch_size, args.minibatch_size):
+                end = start + args.minibatch_size
+                mb_inds = b_inds[start:end]
+
+                _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds],
+                                                                              b_actions[mb_inds])
+                logratio = newlogprob - b_logprobs[mb_inds]
+                ratio = logratio.exp()
+
+                with torch.no_grad():
+                    # calculate approx_kl http://joschu.net/blog/kl-approx.html
+                    old_approx_kl = (-logratio).mean()
+                    approx_kl = ((ratio - 1) - logratio).mean()
+                    clipfracs += [((ratio - 1.0).abs() > args.clip_coef).float().mean().item()]
+
+                mb_advantages = b_advantages[mb_inds]
+                if args.norm_adv:
+                    mb_advantages = (mb_advantages - mb_advantages.mean()) \
+                        (mb_advantages.std() + 1e-8)
+
+                # Policy loss
+                pg_loss = calc_some_losses(mb_advantages, ratio, args)
+
+                # Value loss
+                newvalue = newvalue.view(-1)
+                if args.clip_vloss:
+                    v_loss = clip_vloss(args, newvalue, b_returns, mb_inds, b_values)
+                else:
+                    v_loss = 0.5 * ((newvalue - b_returns[mb_inds]) ** 2).mean()
+
+                entropy_loss = entropy.mean()
+                loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef
+
+                optimizer.zero_grad()
+                loss.backward()
+                nn.utils.clip_grad_norm_(agent.parameters(), args.max_grad_norm)
+                optimizer.step()
+
+            if args.target_kl is not None and approx_kl > args.target_kl:
+                break
+        """
         y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
         var_y = np.var(y_true)
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
@@ -204,9 +254,9 @@ def initialize_env(args, envs, device):
     # TRY NOT TO MODIFY: start the game
     global_step = 0
     start_time = time.time()
-    next_obs, _ = envs.reset() #seed=args.seed)
+    next_obs, _ = envs.reset()# seed=args.seed)
     next_obs = torch.Tensor(next_obs).to(device)
-    next_done = torch.tensor(0, dtype=torch.float32).to(device)  # Scalar tensor for done flag
+    next_done = torch.zeros(args.num_envs).to(device)
     
     return next_obs, next_done, global_step, start_time
 
@@ -363,7 +413,7 @@ def initialize_args():
     str: The generated run name for the training.
     """
     args = tyro.cli(Args)
-    args.batch_size = args.num_steps
+    args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
@@ -407,7 +457,7 @@ def setup_logging_and_seeding(args, run_name):
     return device, writer
 
 
-def initialize_storage(args, env, device):
+def initialize_storage(args, envs, device):
     """
     Initializes storage for observations, actions, log probabilities, rewards, dones, and values.
 
@@ -420,12 +470,13 @@ def initialize_storage(args, env, device):
     tuple: A tuple containing initialized tensors for obs, actions, logprobs, rewards, dones, values.
     """
     # ALGO Logic: Storage setup
-    obs = torch.zeros((args.num_steps,) + env.observation_space.shape).to(device)
-    actions = torch.zeros((args.num_steps,) + env.action_space.shape).to(device)
-    logprobs = torch.zeros((args.num_steps,)+ env.action_space.shape).to(device)  # For two actions
-    rewards = torch.zeros(args.num_steps).to(device)
-    dones = torch.zeros(args.num_steps).to(device)
-    values = torch.zeros(args.num_steps).to(device)
+    obs = torch.zeros((args.num_steps, args.num_envs) + envs.observation_space.shape).to(device)
+    #obs = torch.zeros((args.num_steps, args.num_envs) + (,)).to(device)
+    actions = torch.zeros((args.num_steps, args.num_envs) + envs.action_space.shape).to(device)
+    logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
+    rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
+    dones = torch.zeros((args.num_steps, args.num_envs)).to(device)
+    values = torch.zeros((args.num_steps, args.num_envs)).to(device)
 
     return obs, actions, logprobs, rewards, dones, values
 

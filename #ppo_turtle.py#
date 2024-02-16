@@ -231,6 +231,22 @@ def take_step(step, envs, action, device, rewards, global_step, writer):
 
 def flatten_batches(envs, obs, logprobs, actions, advantages, returns, values):
     """
+    Flattens the batched data for training, maintaining the two-action structure.
+    """
+    b_obs = obs.reshape((-1,) + envs.observation_space.shape)
+    # Maintain two dimensions for actions in logprobs
+    b_logprobs = logprobs.reshape(-1, envs.action_space.shape[0])  # Correctly adjusted for two actions
+    b_actions = actions.reshape((-1,) + envs.action_space.shape)
+    b_advantages = advantages.reshape(-1)
+    b_returns = returns.reshape(-1)
+    b_values = values.reshape(-1)
+
+    return b_obs, b_logprobs, b_actions, b_advantages, b_returns, b_values
+
+
+
+def flatten_batchesOld(envs, obs, logprobs, actions, advantages, returns, values):
+    """
     Flattens the batched data for training.
 
     Parameters:
