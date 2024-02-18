@@ -103,16 +103,19 @@ def rover_main():
             logprobs[step] = logprob
             rewards, next_obs, next_done = take_step(step, envs, action, device,
                                                      rewards, global_step, writer)
+            if (step % 500) == 0 and step > 40000:
+                print('next_obs: heading', next_obs[360].item(), ', distance', next_obs[361].item())
+
         # bootstrap value if not done
         advantages, returns = advantages_and_returns(args, next_obs, agent, device,
                                                      dones, rewards, values, next_done)
         # flatten the batch
         b_obs, b_logprobs, b_actions, b_advantages, b_returns, b_values = \
             flatten_batches(envs, obs, logprobs, actions, advantages, returns, values)
-        # Optimizing the policy and value network
+
         b_inds = np.arange(args.batch_size)
         clipfracs = []
-        for epoch in range(args.update_epochs):
+        for epoch in range(args.update_epochs):  # Optimizing the policy and value network
             np.random.shuffle(b_inds)
             for start in range(0, args.batch_size, args.minibatch_size):
                 end = start + args.minibatch_size
@@ -120,8 +123,6 @@ def rover_main():
 
                 _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds],
                                                                               b_actions[mb_inds])
-                print("newlogprob shape:", newlogprob.shape)
-                print("b_logprobs[mb_inds] shape:", b_logprobs[mb_inds].shape)
 
                 logratio = newlogprob - b_logprobs[mb_inds]
                 ratio = logratio.exp()
@@ -161,10 +162,10 @@ def rover_main():
         y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
         var_y = np.var(y_true)
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
-
+        avg_reward = sum(rewards) / len(rewards)
         log_training_metrics(writer, optimizer, global_step, v_loss, pg_loss,
                              entropy_loss, old_approx_kl, approx_kl, clipfracs,
-                             explained_var, start_time)
+                             explained_var, start_time, avg_reward)
     if args.save_model:
         save_the_model(args, agent)
 
@@ -230,6 +231,22 @@ def take_step(step, envs, action, device, rewards, global_step, writer):
     return rewards, next_obs, next_done 
 
 def flatten_batches(envs, obs, logprobs, actions, advantages, returns, values):
+    """
+    Flattens the batched data for training, maintaining the two-action structure.
+    """
+    b_obs = obs.reshape((-1,) + envs.observation_space.shape)
+    # Maintain two dimensions for actions in logprobs
+    b_logprobs = logprobs.reshape(-1, envs.action_space.shape[0])  # Correctly adjusted for two actions
+    b_actions = actions.reshape((-1,) + envs.action_space.shape)
+    b_advantages = advantages.reshape(-1)
+    b_returns = returns.reshape(-1)
+    b_values = values.reshape(-1)
+
+    return b_obs, b_logprobs, b_actions, b_advantages, b_returns, b_values
+
+
+
+def flatten_batchesOld(envs, obs, logprobs, actions, advantages, returns, values):
     """
     Flattens the batched data for training.
 
@@ -304,7 +321,7 @@ def save_the_model(args, agent):
     
     
 def log_training_metrics(writer, optimizer, global_step, v_loss, pg_loss, entropy_loss,
-                         old_approx_kl, approx_kl, clipfracs, explained_var, start_time):
+                         old_approx_kl, approx_kl, clipfracs, explained_var, start_time, avg_reward):
     """
     Logs various training metrics to the writer.
 
@@ -330,7 +347,8 @@ def log_training_metrics(writer, optimizer, global_step, v_loss, pg_loss, entrop
     writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
     writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
     writer.add_scalar("losses/explained_variance", explained_var, global_step)
-    print("SPS:", int(global_step / (time.time() - start_time)))
+    writer.add_scalar("rewards/average_reward", avg_reward, global_step)
+    print("SPS:", int(global_step / (time.time() - start_time)), ",  Average reward:", avg_reward.item())
     writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
 def clip_vloss(args, newvalue, b_returns, mb_inds, b_values):
@@ -346,8 +364,23 @@ def clip_vloss(args, newvalue, b_returns, mb_inds, b_values):
 
     return v_loss
 
-    
+
 def calc_some_losses(mb_advantages, ratio, args):
+    # Assuming mb_advantages is [64] and ratio is [64, 2]
+    # We need to expand mb_advantages to match the shape of ratio for element-wise operations
+    mb_advantages_expanded = mb_advantages.unsqueeze(-1).expand_as(ratio)
+    
+    # Calculate the policy gradient loss as before, now using the expanded advantages
+    pg_loss1 = -mb_advantages_expanded * ratio
+    pg_loss2 = -mb_advantages_expanded * torch.clamp(ratio, 1 - args.clip_coef, 1 + args.clip_coef)
+    
+    # Since we're dealing with multi-dimensional actions, we take the mean across both dimensions
+    pg_loss = torch.max(pg_loss1, pg_loss2).mean(-1).mean()
+    
+    return pg_loss
+
+
+def calc_some_lossesOld(mb_advantages, ratio, args):
     pg_loss1 = -mb_advantages * ratio
     pg_loss2 = -mb_advantages * torch.clamp(ratio, 1 - args.clip_coef, 1 + args.clip_coef)
     pg_loss = torch.max(pg_loss1, pg_loss2).mean()
