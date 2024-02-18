@@ -68,12 +68,9 @@ def rover_main():
     print("environment made")
     assert isinstance(envs.action_space, gym.spaces.Box), \
         "only continuous action space is supported"
-
     agent = Agent(envs).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
-
     obs, actions, logprobs, rewards, dones, values = initialize_storage(args, envs, device)
-
     next_obs, next_done, global_step, start_time = initialize_env(args, envs, device)
 
     for iteration in range(1, args.num_iterations + 1):
