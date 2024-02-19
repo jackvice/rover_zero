@@ -68,12 +68,9 @@ def rover_main():
     print("environment made")
     assert isinstance(envs.action_space, gym.spaces.Box), \
         "only continuous action space is supported"
-
     agent = Agent(envs).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
-
     obs, actions, logprobs, rewards, dones, values = initialize_storage(args, envs, device)
-
     next_obs, next_done, global_step, start_time = initialize_env(args, envs, device)
 
     for iteration in range(1, args.num_iterations + 1):
@@ -200,6 +197,7 @@ def initialize_env(args, envs, device):
     global_step = 0
     start_time = time.time()
     next_obs, _ = envs.reset() #seed=args.seed)
+    #print('initialize_env(), ############################# len(next_obs)', len(next_obs))
     next_obs = torch.Tensor(next_obs).to(device)
     next_done = torch.tensor(0, dtype=torch.float32).to(device)  # Scalar tensor for done flag
     
@@ -209,6 +207,7 @@ def initialize_env(args, envs, device):
 def take_step(step, envs, action, device, rewards, global_step, writer):
     # TRY NOT TO MODIFY: execute the game and log data.
     next_obs, reward, next_done, truncations, infos = envs.step(action.cpu().numpy())
+    #print('initialize_env(), ############################# obs,shape)', obs.shape))
     next_done = np.logical_or(next_done, truncations)
     rewards[step] = torch.tensor(reward).to(device).view(-1)
 
@@ -496,13 +495,13 @@ class Args:
     # Algorithm specific arguments
 
     """the id of the environment"""
-    total_timesteps: int = 1000000
+    total_timesteps: int = 10000000
     """total timesteps of the experiments"""
     learning_rate: float = 3e-4
     """the learning rate of the optimizer"""
     num_envs: int = 1
     """the number of parallel game environments"""
-    num_steps: int = 2048
+    num_steps: int = 4096 #v1  # old 2048
     """the number of steps to run in each environment per policy rollout"""
     anneal_lr: bool = True
     """Toggle learning rate annealing for policy and value networks"""
@@ -516,11 +515,11 @@ class Args:
     """the K epochs to update the policy"""
     norm_adv: bool = True
     """Toggles advantages normalization"""
-    clip_coef: float = 0.2
+    clip_coef: float = 0.18 #v1 #old 0.2
     """the surrogate clipping coefficient"""
     clip_vloss: bool = True
     """Toggles whether or not to use a clipped loss for the value function, as per the paper."""
-    ent_coef: float = 0.0
+    ent_coef: float = 0.01 #v1   # old 0.0
     """coefficient of the entropy"""
     vf_coef: float = 0.5
     """coefficient of the value function"""
