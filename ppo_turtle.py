@@ -112,8 +112,8 @@ def rover_main():
                 end = start + args.minibatch_size
                 mb_inds = b_inds[start:end]
 
-                _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds],
-                                                                              b_actions[mb_inds])
+                _, newlogprob, entropy, newvalue = \
+                    agent.get_action_and_value(b_obs[mb_inds], b_actions[mb_inds])
 
                 logratio = newlogprob - b_logprobs[mb_inds]
                 ratio = logratio.exp()
