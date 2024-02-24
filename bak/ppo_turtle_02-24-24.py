@@ -4,8 +4,10 @@ import os
 import random
 import time
 from dataclasses import dataclass
-from pixel_observation import PixelObservationWrapper
+#from pixel_observation import PixelObservationWrapper
 import gym
+import gym_turtlebot3
+import rclpy
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
@@ -14,6 +16,8 @@ import torch.optim as optim
 import tyro
 from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
+
+
 
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.orthogonal_(layer.weight, std)
@@ -24,22 +28,21 @@ class Agent(nn.Module):
     def __init__(self, envs):
         super().__init__()
         self.critic = nn.Sequential(
-            #layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 64)),
-            layer_init(nn.Linear(np.array((17,)).prod(), 64)),
+            layer_init(nn.Linear(np.array(envs.observation_space.shape).prod(), 64)),
             nn.Tanh(),
             layer_init(nn.Linear(64, 64)),
             nn.Tanh(),
             layer_init(nn.Linear(64, 1), std=1.0),
         )
         self.actor_mean = nn.Sequential(
-            #layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 64)),
-            layer_init(nn.Linear(np.array((17,)).prod(), 64)),
+            layer_init(nn.Linear(np.array(envs.observation_space.shape).prod(), 64)),
             nn.Tanh(),
             layer_init(nn.Linear(64, 64)),
             nn.Tanh(),
-            layer_init(nn.Linear(64, np.prod(envs.single_action_space.shape)), std=0.01),
+            layer_init(nn.Linear(64, np.prod(envs.action_space.shape)), std=0.01),
         )
-        self.actor_logstd = nn.Parameter(torch.zeros(1, np.prod(envs.single_action_space.shape)))
+        #self.actor_logstd = nn.Parameter(torch.zeros(1, np.prod(envs.action_space.shape)))
+        self.actor_logstd = nn.Parameter(torch.zeros(1))
 
     def get_value(self, x):
         return self.critic(x)
@@ -51,27 +54,24 @@ class Agent(nn.Module):
         probs = Normal(action_mean, action_std)
         if action is None:
             action = probs.sample()
-        return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
+        #return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
+        return action, probs.log_prob(action), probs.entropy(), self.critic(x)
+
 
 
 def rover_main():
+    rclpy.init()
     args, run_name = initialize_args()
     device, writer = setup_logging_and_seeding(args, run_name)
-
-    # env setup
-    envs = gym.vector.SyncVectorEnv(
-        [make_env(args.env_id, i, args.capture_video, run_name, args.gamma) for i in range(args.num_envs)]
-    )
-    assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
+    envs = make_env(args.env_id, args.capture_video, run_name, args.gamma)
+    
+    print("environment made")
+    assert isinstance(envs.action_space, gym.spaces.Box), \
+        "only continuous action space is supported"
     agent = Agent(envs).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
-
     obs, actions, logprobs, rewards, dones, values = initialize_storage(args, envs, device)
-
     next_obs, next_done, global_step, start_time = initialize_env(args, envs, device)
-    #next_obs = torch.Tensor(next_obs).to(device)
-    #imu_obs = torch.Tensor(next_obs['state']).to(device)
-    #pixel_obs = torch.Tensor(next_obs['pixels']).to(device)
 
     for iteration in range(1, args.num_iterations + 1):
         # Annealing the rate if instructed to do so.
@@ -81,7 +81,8 @@ def rover_main():
             optimizer.param_groups[0]["lr"] = lrnow
 
         for step in range(0, args.num_steps):
-            global_step += args.num_envs
+            #print('step num', step)
+            global_step += 1
             obs[step] = next_obs
             dones[step] = next_done
             # ALGO LOGIC: action logic
@@ -92,22 +93,28 @@ def rover_main():
             logprobs[step] = logprob
             rewards, next_obs, next_done = take_step(step, envs, action, device,
                                                      rewards, global_step, writer)
+            if (step % 500) == 0 and step > 40000:
+                print('next_obs: heading', next_obs[360].item(), ', distance',
+                      next_obs[361].item())
+
         # bootstrap value if not done
         advantages, returns = advantages_and_returns(args, next_obs, agent, device,
                                                      dones, rewards, values, next_done)
         # flatten the batch
         b_obs, b_logprobs, b_actions, b_advantages, b_returns, b_values = \
             flatten_batches(envs, obs, logprobs, actions, advantages, returns, values)
-        # Optimizing the policy and value network
+
         b_inds = np.arange(args.batch_size)
         clipfracs = []
-        for epoch in range(args.update_epochs):
+        for epoch in range(args.update_epochs):  # Optimizing the policy and value network
             np.random.shuffle(b_inds)
             for start in range(0, args.batch_size, args.minibatch_size):
                 end = start + args.minibatch_size
                 mb_inds = b_inds[start:end]
 
-                _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds], b_actions[mb_inds])
+                _, newlogprob, entropy, newvalue = \
+                    agent.get_action_and_value(b_obs[mb_inds], b_actions[mb_inds])
+
                 logratio = newlogprob - b_logprobs[mb_inds]
                 ratio = logratio.exp()
 
@@ -119,13 +126,11 @@ def rover_main():
 
                 mb_advantages = b_advantages[mb_inds]
                 if args.norm_adv:
-                    mb_advantages = (mb_advantages - mb_advantages.mean()) / (mb_advantages.std() + 1e-8)
+                    mb_advantages = (mb_advantages - mb_advantages.mean()) \
+                        / (mb_advantages.std() + 1e-8)  # Fixed line
 
                 # Policy loss
                 pg_loss = calc_some_losses(mb_advantages, ratio, args)
-                #pg_loss1 = -mb_advantages * ratio
-                #pg_loss2 = -mb_advantages * torch.clamp(ratio, 1 - args.clip_coef, 1 + args.clip_coef)
-                #pg_loss = torch.max(pg_loss1, pg_loss2).mean()
 
                 # Value loss
                 newvalue = newvalue.view(-1)
@@ -148,111 +153,33 @@ def rover_main():
         y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
         var_y = np.var(y_true)
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
-
+        avg_reward = sum(rewards) / len(rewards)
         log_training_metrics(writer, optimizer, global_step, v_loss, pg_loss,
-                             entropy_loss, old_approx_kl, approx_kl, clipfracs, explained_var, start_time)
+                             entropy_loss, old_approx_kl, approx_kl, clipfracs,
+                             explained_var, start_time, avg_reward)
     if args.save_model:
         save_the_model(args, agent)
 
     envs.close()
     writer.close()
+    rclpy.shutdown()
 
-def make_env(env_id, idx, capture_video, run_name, gamma):
-    def thunk():
-        if capture_video and idx == 0:
-            env = gym.make(env_id, render_mode="rgb_array")
-            #env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
-        else:
-            env = gym.make(env_id)
-        env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
-        env = gym.wrappers.RecordEpisodeStatistics(env)
-        env = gym.wrappers.ClipAction(env)
-        env = gym.wrappers.NormalizeObservation(env)
-        env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
-        env = gym.wrappers.NormalizeReward(env, gamma=gamma)
-        env = gym.wrappers.TransformReward(env, lambda reward: np.clip(reward, -10, 10))
-        env = PixelObservationWrapper(env, pixels_only=False)
-        return env
+def make_env(env_id, capture_video, run_name, gamma):
+    env = gym.make('TurtleBot3_Circuit_Simple_Continuous-v0') 
 
-    return thunk
-
-
-def initialize_args():
-    """
-    Initializes and sets up the arguments for the training process.
-
-    Returns:
-    Namespace: The arguments after setup.
-    str: The generated run name for the training.
-    """
-    args = tyro.cli(Args)
-    args.batch_size = int(args.num_envs * args.num_steps)
-    args.minibatch_size = int(args.batch_size // args.num_minibatches)
-    args.num_iterations = args.total_timesteps // args.batch_size
-    run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
-
-    return args, run_name
-
-
-def setup_logging_and_seeding(args, run_name):
-    """
-    Sets up logging and seeding for reproducibility.
-
-    Parameters:
-    args (Namespace): The arguments after setup.
-    run_name (str): The generated run name for the training.
-    """
-    if args.track:
-        import wandb
-
-        wandb.init(
-            project=args.wandb_project_name,
-            entity=args.wandb_entity,
-            sync_tensorboard=True,
-            config=vars(args),
-            name=run_name,
-            monitor_gym=True,
-            save_code=True,
-        )
-    writer = SummaryWriter(f"runs/{run_name}")
-    writer.add_text(
-        "hyperparameters",
-        "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
-    )
-
-    # TRY NOT TO MODIFY: seeding
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
-    torch.backends.cudnn.deterministic = args.torch_deterministic
-    device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
+    env = gym.make(env_id)
+    #env = gym.make(env_id, render_mode="rgb_array")
+    #env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
     
-    return device, writer
+    #Are these necessary?
+    env = gym.wrappers.ClipAction(env)
+    env = gym.wrappers.NormalizeObservation(env)
+    env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
+    env = gym.wrappers.NormalizeReward(env, gamma=gamma)
+    env = gym.wrappers.TransformReward(env, lambda reward: np.clip(reward, -10, 10))
+    return env
 
-
-def initialize_storage(args, envs, device):
-    """
-    Initializes storage for observations, actions, log probabilities, rewards, dones, and values.
-
-    Parameters:
-    args (Namespace): Contains arguments like the number of steps and environments.
-    envs (Env): The environment to get observation and action space.
-    device (Device): The device to use for tensor operations.
-
-    Returns:
-    tuple: A tuple containing initialized tensors for obs, actions, logprobs, rewards, dones, values.
-    """
-    # ALGO Logic: Storage setup
-    #obs = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(device)
-    obs = torch.zeros((args.num_steps, args.num_envs) + (17,)).to(device)
-    actions = torch.zeros((args.num_steps, args.num_envs) + envs.single_action_space.shape).to(device)
-    logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
-    rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
-    dones = torch.zeros((args.num_steps, args.num_envs)).to(device)
-    values = torch.zeros((args.num_steps, args.num_envs)).to(device)
-
-    return obs, actions, logprobs, rewards, dones, values
-
+    
 def initialize_env(args, envs, device):
     """
     Initializes the game by setting the global step, start time, and getting the initial observations 
@@ -269,20 +196,25 @@ def initialize_env(args, envs, device):
     # TRY NOT TO MODIFY: start the game
     global_step = 0
     start_time = time.time()
-    next_obs, _ = envs.reset(seed=args.seed)
-    next_obs = torch.Tensor(next_obs['state']).to(device)
-    next_done = torch.zeros(args.num_envs).to(device)
+    next_obs, _ = envs.reset() #seed=args.seed)
+    #print('initialize_env(), ############################# len(next_obs)', len(next_obs))
+    next_obs = torch.Tensor(next_obs).to(device)
+    next_done = torch.tensor(0, dtype=torch.float32).to(device)  # Scalar tensor for done flag
     
     return next_obs, next_done, global_step, start_time
 
 
 def take_step(step, envs, action, device, rewards, global_step, writer):
     # TRY NOT TO MODIFY: execute the game and log data.
-    next_obs, reward, terminations, truncations, infos = envs.step(action.cpu().numpy())
-    next_done = np.logical_or(terminations, truncations)
+    next_obs, reward, next_done, truncations, infos = envs.step(action.cpu().numpy())
+    #print('initialize_env(), ############################# obs,shape)', obs.shape))
+    next_done = np.logical_or(next_done, truncations)
     rewards[step] = torch.tensor(reward).to(device).view(-1)
-    next_obs, next_done = torch.Tensor(next_obs['state']).to(device), torch.Tensor(next_done).to(device)
 
+    next_obs, next_done = torch.Tensor(next_obs).to(device),\
+        torch.Tensor([int(next_done)]).to(device)
+    #next_obs = torch.Tensor(next_obs).to(device)
+    
     if "final_info" in infos:
         for info in infos["final_info"]:
             if info and "episode" in info:
@@ -293,6 +225,22 @@ def take_step(step, envs, action, device, rewards, global_step, writer):
     return rewards, next_obs, next_done 
 
 def flatten_batches(envs, obs, logprobs, actions, advantages, returns, values):
+    """
+    Flattens the batched data for training, maintaining the two-action structure.
+    """
+    b_obs = obs.reshape((-1,) + envs.observation_space.shape)
+    # Maintain two dimensions for actions in logprobs
+    b_logprobs = logprobs.reshape(-1, envs.action_space.shape[0]) # 2 continuous actions
+    b_actions = actions.reshape((-1,) + envs.action_space.shape)
+    b_advantages = advantages.reshape(-1)
+    b_returns = returns.reshape(-1)
+    b_values = values.reshape(-1)
+
+    return b_obs, b_logprobs, b_actions, b_advantages, b_returns, b_values
+
+
+
+def flatten_batchesOld(envs, obs, logprobs, actions, advantages, returns, values):
     """
     Flattens the batched data for training.
 
@@ -305,9 +253,9 @@ def flatten_batches(envs, obs, logprobs, actions, advantages, returns, values):
     returns (Tensor): Returns calculated for each step.
     values (Tensor): Values estimated by the agent.
     """
-    b_obs = obs.reshape((-1,) + (17,))#envs.single_observation_space.shape)
+    b_obs = obs.reshape((-1,) + envs.observation_space.shape)
     b_logprobs = logprobs.reshape(-1)
-    b_actions = actions.reshape((-1,) + envs.single_action_space.shape)
+    b_actions = actions.reshape((-1,) + envs.action_space.shape)
     b_advantages = advantages.reshape(-1)
     b_returns = returns.reshape(-1)
     b_values = values.reshape(-1)
@@ -367,7 +315,8 @@ def save_the_model(args, agent):
     
     
 def log_training_metrics(writer, optimizer, global_step, v_loss, pg_loss, entropy_loss,
-                         old_approx_kl, approx_kl, clipfracs, explained_var, start_time):
+                         old_approx_kl, approx_kl, clipfracs, explained_var,
+                         start_time, avg_reward):
     """
     Logs various training metrics to the writer.
 
@@ -393,7 +342,9 @@ def log_training_metrics(writer, optimizer, global_step, v_loss, pg_loss, entrop
     writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
     writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
     writer.add_scalar("losses/explained_variance", explained_var, global_step)
-    print("SPS:", int(global_step / (time.time() - start_time)))
+    writer.add_scalar("rewards/average_reward", avg_reward, global_step)
+    print("SPS:", int(global_step / (time.time() - start_time)),
+          ",  Average reward:", avg_reward.item())
     writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
 def clip_vloss(args, newvalue, b_returns, mb_inds, b_values):
@@ -409,13 +360,108 @@ def clip_vloss(args, newvalue, b_returns, mb_inds, b_values):
 
     return v_loss
 
-    
+
 def calc_some_losses(mb_advantages, ratio, args):
+    # Assuming mb_advantages is [64] and ratio is [64, 2]
+    # We need to expand mb_advantages to match the shape of ratio for element-wise operations
+    mb_advantages_expanded = mb_advantages.unsqueeze(-1).expand_as(ratio)
+    
+    # Calculate the policy gradient loss as before, now using the expanded advantages
+    pg_loss1 = -mb_advantages_expanded * ratio
+    pg_loss2 = -mb_advantages_expanded * torch.clamp(ratio, 1 - args.clip_coef,
+                                                     1 + args.clip_coef)
+    
+    # Mean across both dimensions
+    pg_loss = torch.max(pg_loss1, pg_loss2).mean(-1).mean()
+    
+    return pg_loss
+
+
+def calc_some_lossesOld(mb_advantages, ratio, args):
     pg_loss1 = -mb_advantages * ratio
     pg_loss2 = -mb_advantages * torch.clamp(ratio, 1 - args.clip_coef, 1 + args.clip_coef)
     pg_loss = torch.max(pg_loss1, pg_loss2).mean()
     return pg_loss
+
+
+def initialize_args():
+    """
+    Initializes and sets up the arguments for the training process.
+
+    Returns:
+    Namespace: The arguments after setup.
+    str: The generated run name for the training.
+    """
+    args = tyro.cli(Args)
+    args.batch_size = args.num_steps
+    args.minibatch_size = int(args.batch_size // args.num_minibatches)
+    args.num_iterations = args.total_timesteps // args.batch_size
+    run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+
+    return args, run_name
+
+
+def setup_logging_and_seeding(args, run_name):
+    """
+    Sets up logging and seeding for reproducibility.
+
+    Parameters:
+    args (Namespace): The arguments after setup.
+    run_name (str): The generated run name for the training.
+    """
+    if args.track:
+        import wandb
+
+        wandb.init(
+            project=args.wandb_project_name,
+            entity=args.wandb_entity,
+            sync_tensorboard=True,
+            config=vars(args),
+            name=run_name,
+            monitor_gym=True,
+            save_code=True,
+        )
+    writer = SummaryWriter(f"runs/{run_name}")
+    writer.add_text(
+        "hyperparameters",
+        "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|"
+                                                 for key, value in vars(args).items()])),
+    )
+
+    # TRY NOT TO MODIFY: seeding
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.backends.cudnn.deterministic = args.torch_deterministic
+    device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
     
+    return device, writer
+
+
+def initialize_storage(args, env, device):
+    """
+    Initializes storage for observations, actions, log probabilities, rewards, dones, and values.
+
+    Parameters:
+    args (Namespace): Contains arguments like the number of steps and environments.
+    envs (Env): The environment to get observation and action space.
+    device (Device): The device to use for tensor operations.
+
+    Returns:
+    tuple: A tuple containing initialized tensors for obs, actions, logprobs, 
+                    rewards, dones, values.
+    """
+    # ALGO Logic: Storage setup
+    obs = torch.zeros((args.num_steps,) + env.observation_space.shape).to(device)
+    actions = torch.zeros((args.num_steps,) + env.action_space.shape).to(device)
+    logprobs = torch.zeros((args.num_steps,)+ env.action_space.shape).to(device)  # For two actions
+    rewards = torch.zeros(args.num_steps).to(device)
+    dones = torch.zeros(args.num_steps).to(device)
+    values = torch.zeros(args.num_steps).to(device)
+
+    return obs, actions, logprobs, rewards, dones, values
+
+
 @dataclass
 class Args:
     exp_name: str = os.path.basename(__file__)[: -len(".py")]
@@ -440,17 +486,22 @@ class Args:
     """whether to upload the saved model to huggingface"""
     hf_entity: str = ""
     """the user or org name of the model repository from the Hugging Face Hub"""
+    if True:
+        
+        env_id: str = "TurtleBot3_Circuit_Simple_Continuous-v0"
+    else:
+        env_id: str = "HalfCheetah-v4"
 
     # Algorithm specific arguments
-    env_id: str = "HalfCheetah-v4"
+
     """the id of the environment"""
-    total_timesteps: int = 1000000
+    total_timesteps: int = 10000000
     """total timesteps of the experiments"""
     learning_rate: float = 3e-4
     """the learning rate of the optimizer"""
     num_envs: int = 1
     """the number of parallel game environments"""
-    num_steps: int = 2048
+    num_steps: int = 4096 #v1  # old 2048
     """the number of steps to run in each environment per policy rollout"""
     anneal_lr: bool = True
     """Toggle learning rate annealing for policy and value networks"""
@@ -464,11 +515,11 @@ class Args:
     """the K epochs to update the policy"""
     norm_adv: bool = True
     """Toggles advantages normalization"""
-    clip_coef: float = 0.2
+    clip_coef: float = 0.18 #v1 #old 0.2
     """the surrogate clipping coefficient"""
     clip_vloss: bool = True
     """Toggles whether or not to use a clipped loss for the value function, as per the paper."""
-    ent_coef: float = 0.0
+    ent_coef: float = 0.01 #v1   # old 0.0
     """coefficient of the entropy"""
     vf_coef: float = 0.5
     """coefficient of the value function"""
