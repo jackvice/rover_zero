@@ -9,7 +9,7 @@ def main():
     rclpy.init()
     env_name = 'TurtleBot3_Circuit_Simple_Continuous-v0'
     env = gym.make(env_name)
-    #env = DummyVecEnv([lambda: env])
+    env = DummyVecEnv([lambda: env])
 
     model = PPO("MlpPolicy", env, verbose=1)
     

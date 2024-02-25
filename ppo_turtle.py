@@ -51,6 +51,7 @@ class Agent(nn.Module):
         action_mean = self.actor_mean(x)
         action_logstd = self.actor_logstd.expand_as(action_mean)
         action_std = torch.exp(action_logstd)
+        #print("action_mean, action_std)", action_mean, action_std)
         probs = Normal(action_mean, action_std)
         if action is None:
             action = probs.sample()
@@ -72,6 +73,7 @@ def rover_main():
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
     obs, actions, logprobs, rewards, dones, values = initialize_storage(args, envs, device)
     next_obs, next_done, global_step, start_time = initialize_env(args, envs, device)
+    #print("##################################### next_obs", next_obs)
 
     for iteration in range(1, args.num_iterations + 1):
         # Annealing the rate if instructed to do so.
@@ -93,10 +95,7 @@ def rover_main():
             logprobs[step] = logprob
             rewards, next_obs, next_done = take_step(step, envs, action, device,
                                                      rewards, global_step, writer)
-            if (step % 500) == 0 and step > 40000:
-                print('next_obs: heading', next_obs[360].item(), ', distance',
-                      next_obs[361].item())
-
+ 
         # bootstrap value if not done
         advantages, returns = advantages_and_returns(args, next_obs, agent, device,
                                                      dones, rewards, values, next_done)
@@ -182,8 +181,8 @@ def make_env(env_id, capture_video, run_name, gamma):
     
 def initialize_env(args, envs, device):
     """
-    Initializes the game by setting the global step, start time, and getting the initial observations 
-    and done flags.
+    Initializes the game by setting the global step, start time, and getting the initial 
+    observations and done flags.
 
     Parameters:
     args (Namespace): Contains arguments like the seed.
@@ -194,12 +193,13 @@ def initialize_env(args, envs, device):
     tuple: A tuple next_obs, done flags (next_done), global step, and start time.
     """
     # TRY NOT TO MODIFY: start the game
+    print('In: initialize_env(args, envs, device):')
     global_step = 0
     start_time = time.time()
     next_obs, _ = envs.reset() #seed=args.seed)
-    #print('initialize_env(), ############################# len(next_obs)', len(next_obs))
+    #print('initialize_env(), ############################# (next_obs)', (next_obs))
     next_obs = torch.Tensor(next_obs).to(device)
-    next_done = torch.tensor(0, dtype=torch.float32).to(device)  # Scalar tensor for done flag
+    next_done = torch.tensor(0, dtype=torch.float32).to(device)  # Scalar tensor done flag
     
     return next_obs, next_done, global_step, start_time
 
@@ -219,8 +219,10 @@ def take_step(step, envs, action, device, rewards, global_step, writer):
         for info in infos["final_info"]:
             if info and "episode" in info:
                 print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
-                writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
-                writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
+                writer.add_scalar("charts/episodic_return", info["episode"]["r"],
+                                  global_step)
+                writer.add_scalar("charts/episodic_length", info["episode"]["l"],
+                                  global_step)
 
     return rewards, next_obs, next_done 
 
