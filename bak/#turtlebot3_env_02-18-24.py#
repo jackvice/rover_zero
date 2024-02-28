@@ -271,7 +271,6 @@ class TurtleBot3Env(gym.Env, Node):
         self.goal_x = 1.0  # Default value
         self.goal_y = 2.0  # Default value
         return self.goal_x, self.goal_y
-
     
     def getOdometry(self, odom):
         if not hasattr(self, 'goal_x') or not hasattr(self, 'goal_y'):
