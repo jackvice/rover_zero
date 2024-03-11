@@ -43,7 +43,7 @@ class Args:
     # Algorithm specific arguments
     env_id: str =  "TurtleBot3_Circuit_Simple_Continuous-v0" #"HalfCheetah-v4"
     """the id of the environment"""
-    total_timesteps: int = 10_000_000
+    total_timesteps: int = 10000000
     """total timesteps of the experiments"""
     learning_rate: float = 3e-4
     """the learning rate of the optimizer"""
@@ -121,18 +121,18 @@ class Agent(nn.Module):
     def __init__(self, envs):
         super().__init__()
         self.critic = nn.Sequential(
-            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 64)),
+            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 256)),
             nn.Tanh(),
-            layer_init(nn.Linear(64,32)),
+            layer_init(nn.Linear(256,128)),
             nn.Tanh(),
-            layer_init(nn.Linear(32, 1), std=1.0),
+            layer_init(nn.Linear(128, 1), std=1.0),
         )
         self.actor_mean = nn.Sequential(
-            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 64)),
+            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 256)),
             nn.Tanh(),
-            layer_init(nn.Linear(64, 32)),
+            layer_init(nn.Linear(256, 128)),
             nn.Tanh(),
-            layer_init(nn.Linear(32, np.prod(envs.single_action_space.shape)), std=0.01),
+            layer_init(nn.Linear(128, np.prod(envs.single_action_space.shape)), std=0.01),
         )
         self.actor_logstd = nn.Parameter(torch.zeros(1, np.prod(envs.single_action_space.shape)))
 
@@ -191,13 +191,6 @@ if __name__ == "__main__":
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space"
 
     agent = Agent(envs).to(device)
-    # Load model checkpoint if exists
-    model_path = f"runs/{run_name}/{args.exp_name}.cleanrl_model"
-    if os.path.exists(model_path):
-        agent.load_state_dict(torch.load(model_path))
-        agent.to(device)  # Ensure model is on the correct device
-        print(f"Loaded checkpoint from {model_path}")
-
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
@@ -351,26 +344,25 @@ if __name__ == "__main__":
               round(avg_reward.item(),4))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
-        if args.save_model:
-            model_path = f"runs/{run_name}/{args.exp_name}.cleanrl_model"
-            torch.save(agent.state_dict(), model_path)
-            print(f"model saved to {model_path}")
+    if args.save_model:
+        model_path = f"runs/{run_name}/{args.exp_name}.cleanrl_model"
+        torch.save(agent.state_dict(), model_path)
+        print(f"model saved to {model_path}")
+        from cleanrl_utils.evals.ppo_eval import evaluate
 
-            """
-            from cleanrl_utils.evals.ppo_eval import evaluate
-            episodic_returns = evaluate(
-                model_path,
-                make_env,
-                args.env_id,
-                eval_episodes=10,
-                run_name=f"{run_name}-eval",
-                Model=Agent,
-                device=device,
-                gamma=args.gamma,
-            )
-            for idx, episodic_return in enumerate(episodic_returns):
-                writer.add_scalar("eval/episodic_return", episodic_return, idx)
-            """
+        episodic_returns = evaluate(
+            model_path,
+            make_env,
+            args.env_id,
+            eval_episodes=10,
+            run_name=f"{run_name}-eval",
+            Model=Agent,
+            device=device,
+            gamma=args.gamma,
+        )
+        for idx, episodic_return in enumerate(episodic_returns):
+            writer.add_scalar("eval/episodic_return", episodic_return, idx)
+
         if args.upload_model:
             from cleanrl_utils.huggingface import push_to_hub
 
