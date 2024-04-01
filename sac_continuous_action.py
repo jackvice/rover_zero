@@ -5,7 +5,7 @@ import time
 import rclpy
 from dataclasses import dataclass
 import gym_turtlebot3
-import gym
+import gymnasium as gym
 import numpy as np
 import torch
 import torch.nn as nn
@@ -13,7 +13,9 @@ import torch.nn.functional as F
 import torch.optim as optim
 import tyro
 from stable_baselines3.common.buffers import ReplayBuffer
+from stable_baselines3.common.env_checker import check_env
 from torch.utils.tensorboard import SummaryWriter
+
 
 
 @dataclass
@@ -74,8 +76,9 @@ def make_env(env_id, seed, idx, capture_video, run_name):
             env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
         else:
             env = gym.make(env_id)
+        #check_env(env, warn=True, skip_render_check=True)
         env = gym.wrappers.RecordEpisodeStatistics(env)
-        env = gym.wrappers.FlattenObservation(env)
+        #env = gym.wrappers.FlattenObservation(env)
         env = gym.wrappers.NormalizeObservation(env)
         env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
         #env = gym.wrappers.NormalizeReward(env, gamma=gamma)
@@ -189,7 +192,7 @@ if __name__ == "__main__":
     # env setup
     envs = gym.vector.SyncVectorEnv([make_env(args.env_id, args.seed, 0, args.capture_video, run_name)])
     assert isinstance(envs.action_space, gym.spaces.Box), "only continuous action space is supported"
-    #print("envs.observation_space.shape)", envs.observation_space.shape)
+    print("envs.observation_space type", type(envs.observation_space) )
     #exit()
 
     max_action = float(envs.action_space.high[0][0])
@@ -214,6 +217,7 @@ if __name__ == "__main__":
         alpha = args.alpha
 
     envs.observation_space.dtype = np.float32
+    #print( '################# time is', time.time())
     rb = ReplayBuffer(
         args.buffer_size,
         envs.observation_space,
@@ -224,7 +228,7 @@ if __name__ == "__main__":
     start_time = time.time()
 
     # TRY NOT TO MODIFY: start the game
-    obs, _ = envs.reset() #seed=args.seed) jmv
+    obs, _ = envs.reset(seed=args.seed) #jmv
     for global_step in range(args.total_timesteps):
         # ALGO LOGIC: put action logic here
         if global_step < args.learning_starts:

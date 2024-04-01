@@ -1,0 +1,51 @@
+import gymnasium as gym
+import gym_turtlebot3
+import rclpy
+from stable_baselines3 import SAC
+from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.callbacks import EvalCallback
+
+def main():
+    rclpy.init()
+    iterations = 100
+    env_name = 'TurtleBot3_Circuit_Simple_Continuous-v0'
+    env = gym.make(env_name)
+    env = DummyVecEnv([lambda: env])
+
+    # Define hyperparameters
+    hyperparams = {
+        "policy": "MultiInputPolicy",
+        "env": env,
+        "learning_rate": 3e-4,
+        "buffer_size": 50000,
+        "learning_starts": 1000,
+        "batch_size": 64,
+        "tau": 0.005,
+        "gamma": 0.99,
+        "train_freq": (1, "episode"),
+        "gradient_steps": -1,
+        "action_noise": None,
+        "replay_buffer_class": None,
+        "replay_buffer_kwargs": None,
+        "optimize_memory_usage": False,
+        "ent_coef": 'auto',
+        "target_update_interval": 1,
+        "target_entropy": 'auto',
+        "use_sde": False,
+        "sde_sample_freq": -1,
+        "use_sde_at_warmup": False,
+        "tensorboard_log": "./sb3_runs/",
+        "verbose": 1
+    }
+    
+    model = SAC(**hyperparams)
+
+    for i in range(iterations):
+        model.learn(total_timesteps=int(1e4), log_interval=10)
+        print("Saving model")
+        model.save(env_name)
+    
+    rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()

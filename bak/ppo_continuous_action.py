@@ -13,7 +13,8 @@ import torch.optim as optim
 import tyro
 from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
-
+from datetime import datetime
+import time
 
 @dataclass
 class Args:
@@ -149,12 +150,14 @@ class Agent(nn.Module):
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
 
 
-if __name__ == "__main__":
+def main():
+    load_prev_model = True
     rclpy.init()
     args = tyro.cli(Args)
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
+    print("############## ########### args.num_iterations", args.num_iterations)
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
     if args.track:
         import wandb
@@ -192,11 +195,13 @@ if __name__ == "__main__":
 
     agent = Agent(envs).to(device)
     # Load model checkpoint if exists
-    model_path = f"runs/{run_name}/{args.exp_name}.cleanrl_model"
-    if os.path.exists(model_path):
+    #model_path = f"runs/{run_name}/{args.exp_name}.cleanrl_model"
+    #model_path = f"runs/TurtleBot3_Circuit_Simple_Continuous-v0__ppo_continuous_action__1__1710156851/ppo_continuous_action.cleanrl_mode"
+    #model_path = f"runs/TurtleBot3_Circuit_Simple_Continuous-v0__ppo_continuous_action__1__1710623812/ppo_continuous_action2024-03-17-11-23-32.cleanrl_model"
+    if os.path.exists(model_path) and load_prev_model:
         agent.load_state_dict(torch.load(model_path))
         agent.to(device)  # Ensure model is on the correct device
-        print(f"Loaded checkpoint from {model_path}")
+        print(f"######################################## Loaded checkpoint from {model_path}")
 
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
@@ -224,6 +229,7 @@ if __name__ == "__main__":
             optimizer.param_groups[0]["lr"] = lrnow
 
         for step in range(0, args.num_steps):
+            iteration_start_time = time.time() #for checking loop iteration time
             global_step += args.num_envs
             obs[step] = next_obs
             dones[step] = next_done
@@ -239,19 +245,29 @@ if __name__ == "__main__":
 
             # TRY NOT TO MODIFY: execute the game and log data.
             next_obs, reward, terminations, truncations, infos = envs.step(action.cpu().numpy())
-            #print(next_obs)
-            #exit()
             #next_obs = preprocess_observation(next_obs)
             next_done = np.logical_or(terminations, truncations)
+            if next_done:
+                print('############################### done and reward is', reward, 'terminations, truncations', terminations, truncations)
+                
             rewards[step] = torch.tensor(reward).to(device).view(-1)
             next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
 
             if "final_info" in infos:
+                print("final_info")
                 for info in infos["final_info"]:
                     if info and "episode" in info:
                         print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
                         writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
                         writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
+
+            # check time of loop   
+            iteration_end_time = time.time()  # End time of the current iteration
+            iteration_duration = iteration_end_time - iteration_start_time  # Duration of the iteration
+            #print(f"Iteration {step} took {iteration_duration} seconds, with reward {reward}")
+            # Check if the iteration took more than 0.1 seconds running at 4.5x
+            if iteration_duration > 0.1:
+                print(f"Iteration {step} took {iteration_duration} seconds, which is more than 0.1 seconds.")
 
         # bootstrap value if not done
         with torch.no_grad():
@@ -351,8 +367,15 @@ if __name__ == "__main__":
               round(avg_reward.item(),4))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
-        if args.save_model:
-            model_path = f"runs/{run_name}/{args.exp_name}.cleanrl_model"
+        if args.save_model and iteration % 10 == 0:
+            model_now = datetime.now()
+
+            # Format the string as you like. This example uses year-month-day-hour-minute-second
+            now_str = model_now.strftime("%Y-%m-%d-%H-%M-%S")
+            
+            # Example of using it in a file name
+            
+            model_path = f"runs/{run_name}/{args.exp_name}" + now_str + ".cleanrl_model"
             torch.save(agent.state_dict(), model_path)
             print(f"model saved to {model_path}")
 
@@ -380,3 +403,16 @@ if __name__ == "__main__":
 
     envs.close()
     writer.close()
+
+
+#import cProfile
+#import pstats
+
+
+if __name__ == "__main__":
+    #profiler = cProfile.Profile()
+    #profiler.enable()
+    main()
+    #profiler.disable()
+    #stats = pstats.Stats(profiler).sort_stats('cumtime')
+    #stats.print_stats(10)  # Adjust the number to show more or fewer lines

@@ -1,4 +1,6 @@
+#import gymnasium as gym
 import gym
+
 import gym_turtlebot3  # Ensure this imports TurtleBot3Env correctly
 import rclpy
 from stable_baselines3 import PPO
@@ -7,11 +9,14 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 
 def main():
     rclpy.init()
-    env_name = 'TurtleBot3_Circuit_Simple_Continuous-v0'
+    env_name = "BipedalWalker-v3"
+    #env_name = 'TurtleBot3_Circuit_Simple_Continuous-v0'
     env = gym.make(env_name)
+    #print('env is', env)
+    #exit()
     env = DummyVecEnv([lambda: env])
-
     model = PPO("MlpPolicy", env, verbose=1)
+    #model = PPO("MultiInputPolicy", env, verbose=1)
     
     model.learn(total_timesteps=int(1e4), log_interval=10)
     print("saving model")
